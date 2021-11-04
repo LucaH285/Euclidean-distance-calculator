@@ -22,9 +22,12 @@ class loadPreprocess:
         PValAdjustedFrames = [EDFunctions.checkPVals(Frames[0], self.PVal) for Frames in PreprocessedFrames]
         BodyPartList = [Parts[1] for Parts in PreprocessedFrames]
         return(PValAdjustedFrames, BodyPartList)
-        
+    
+class computeEuclideanDistance(loadPreprocess):
+    def computeED(self):
+        FrameList = [EDFunctions.computeEuclideanDistance(Frames, self.preprocess()[1][0]) for Frames in self.preprocess()[0]]
         
 if __name__=="__main__":
     FilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels"
-    Class = loadPreprocess(FilePath, PValCutoff = 0.95)
-    Class.preprocess()
+    Class = computeEuclideanDistance(FilePath, PValCutoff = 0.95)
+    Class.computeED()
