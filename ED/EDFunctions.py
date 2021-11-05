@@ -10,6 +10,21 @@ import numpy as np
 import os
 
 def preprocessor(DataFrame):
+    """
+    Function responsible for early preprocessing of the input data frames
+        - creates a list of body parts labeled by the neural net
+        - creates a trimmed frame, such that only relevant numerical data is included (i.e.: x, y coords and p-vals)
+
+    Parameters
+    ----------
+    Data frames as inputs
+
+    Returns
+    -------
+    The function returns a list of these preprocessed frames.
+    returns a list of body parts as well.
+
+    """
     ResetColNames = {
         DataFrame.columns.values[Ind]:Ind for Ind in range(len(DataFrame.columns.values))
         }
@@ -21,6 +36,19 @@ def preprocessor(DataFrame):
     return(TrimmedFrame, BodyParts)
 
 def checkPVals(DataFrame, CutOff):
+    """
+    Function responsible for processing p-values, namely omitting
+
+    Parameters
+    ----------
+    Data frames as inputs
+
+    Returns
+    -------
+    The function returns a list of these preprocessed frames.
+    returns a list of body parts as well.
+
+    """
     for Cols in DataFrame.columns.values:
         if Cols % 3 == 0:
             if float(DataFrame[Cols][0]) < CutOff:
@@ -31,18 +59,34 @@ def checkPVals(DataFrame, CutOff):
         DataFrame[Query] = DataFrame[Query].mask(pd.to_numeric(DataFrame[Cols], downcast="float") < CutOff).ffill()
         Cols += 3
     return(DataFrame)
-    
+
 def computeEuclideanDistance(DataFrame, BodyParts):
-    DistanceVectors = [[] for _ in range(len(BodyParts))]
+    DistanceVectors = []
     ColsToDrop = [Cols for Cols in DataFrame if Cols % 3 == 0]
     DataFrame = DataFrame.drop(ColsToDrop, axis = 1)
-    CreateVectors = lambda Coord1, Coord2: [(float(y) - float(x)) for x, y in zip(Coord1, Coord2)]
+    CreateVectors = lambda x, y: [x, y]
+    CreateDirectionalVectors = lambda Vec1, Vec2: [Vals2 - Vals1 for Vals1, Vals2 in zip(Vec1, Vec2)]
     ComputeNorm = lambda Vec: np.sqrt(sum(x ** 2 for x in Vec))
-    Counter = 0
     for Cols1, Cols2 in zip(DataFrame.columns.values[:-1], DataFrame.columns.values[1:]):
         if Cols2 - Cols1 == 1:
-            Vectors = list(map(CreateVectors, DataFrame[Cols1], DataFrame[Cols2]))
+            Vectors = list(map(CreateVectors,
+            list(pd.to_numeric(DataFrame[Cols1], downcast="float")),
+            list(pd.to_numeric(DataFrame[Cols2], downcast="float"))
+            ))
+            DirectionalVectors = list(map(CreateDirectionalVectors, Vectors[:-1], Vectors[1:]))
             Norm = list(map(ComputeNorm, Vectors))
-            DistanceVectors[Counter].append(Norm)
-    return(DistanceVectors)
-                
+            DistanceVectors.append(Norm)
+    EDFrame = pd.DataFrame(data={BodyParts[Ind]: DistanceVectors[Ind] for Ind in range(len(DistanceVectors))})
+    return(EDFrame)
+
+def computeHourlySums(DataFrameList):
+    print(DataFrameList)
+    SumFunction = lambda ColVec: sum(ColVec)
+    SumLists = [[] for _ in range(len(DataFrameList))]
+    for Frames in range(len(DataFrameList)):
+        for Cols in DataFrameList[Frames]:
+            #SumFunction = Frames[Cols].apply(lambda x: )
+            Function = list(map(SumFunction, Frames[Cols]))
+            SumLists[Frames].append(Function)
+    print(SumLists)
+    breakpoint()
