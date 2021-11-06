@@ -31,9 +31,22 @@ class computeEuclideanDistance(loadPreprocess):
     def createHourlySums(self):
         HourlySumLists = EDFunctions.computeHourlySums(self.computeED())
         return(HourlySumLists)
+    
+    def createLinearEquations(self):
+        LinearEquations = EDFunctions.computeLinearEquations(self.createHourlySums())
+        return(LinearEquations)
+    
+    def computeIntegral(self):
+        Integrals = EDFunctions.computeIntegrals(self.createLinearEquations())
+        return(Integrals)
+
+class computations(ABC):
+    @abstractmethod
+    def inheritComputations(self, Compute):
+        pass
 
 
 if __name__=="__main__":
-    FilePath="/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001"
+    FilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\RawVideos2"
     Class = computeEuclideanDistance(FilePath, PValCutoff = 0.95)
-    Class.createHourlySums()
+    Class.computeIntegral()
