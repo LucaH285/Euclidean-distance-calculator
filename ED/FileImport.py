@@ -43,6 +43,7 @@ def ImportFunction_IfFile(Path):
     CSVFileList = [pd.read_csv(Path)]
     return(CSVFileList)
 
+
 def Import(File):
     """
     The discriminator function, this function determines if the input file is a directory or an individual file
