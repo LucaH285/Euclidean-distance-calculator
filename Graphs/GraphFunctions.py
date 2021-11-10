@@ -6,8 +6,14 @@ Created on Sun Nov  7 00:08:39 2021
 """
 import matplotlib.pyplot as mp
 
-def barplot(DataFrame):
-    mp.bar(x, height, kwargs)
-    
+
+def lineplot(DataFrame):
+    for Cols in DataFrame.columns.values:
+        mp.plot(DataFrame.index.values, DataFrame[Cols], label=Cols)
+    mp.xlabel("Hour of Day")
+    mp.ylabel("Total motility per hour")
+    mp.legend()
+    mp.show()
+
 
 
