@@ -7,7 +7,7 @@ Created on Wed Nov  3 15:28:09 2021
 import pandas as pd
 from collections import OrderedDict
 import numpy as np
-from scipy.integrate import quad 
+from scipy.integrate import quad
 
 def preprocessor(DataFrame):
     """
@@ -65,9 +65,9 @@ def computeEuclideanDistance(DataFrame, BodyParts):
     Function responsible for computing the interframe Euclidean Distance
     Applies the 2D Euclidean distance formula between frames on the coordinates of each tracked
     label from DLC.
-        
+
         d(p, q) = sqrt(sum(q - p) ** 2))
-        
+
         - where p, q are 2D cartesian coordinates, in this case the coordinate labels
         in sequential frames.
 
@@ -77,7 +77,7 @@ def computeEuclideanDistance(DataFrame, BodyParts):
 
     Returns
     -------
-    The function returns a list of these frames 
+    The function returns a list of these frames
     """
     DistanceVectors = []
     ColsToDrop = [Cols for Cols in DataFrame if Cols % 3 == 0]
@@ -115,7 +115,7 @@ def computeHourlySums(DataFrameList):
         SumFunction = DataFrameList[Frames].apply(np.sum, axis=0)
         SummedFrame = pd.DataFrame(SumFunction)
         SumLists.append(SummedFrame.transpose())
-    AdjustedFrame = pd.concat(SumLists).reset_index(drop=True) 
+    AdjustedFrame = pd.concat(SumLists).reset_index(drop=True)
     return(AdjustedFrame)
 
 def computeLinearEquations(HourlyFrame):
@@ -135,14 +135,14 @@ def computeLinearEquations(HourlyFrame):
     InterceptFunction = lambda Column, Slopes: ((Column[Ind] - Slopes[Ind]*Ind) for Ind in range(len(Slopes)))
     Slope = [list(SlopeFunction(HourlyFrame[Cols])) for Cols in HourlyFrame]
     Intercept = [list(InterceptFunction(HourlyFrame[Cols], Slope[rng])) for Cols, rng in zip(HourlyFrame, range(len(Slope)))]
-    Zipper = [[(slope, intercept, start, end) for slope, intercept, start, end in zip(Col1, Col2, HourlyFrame.index.values[:-1], HourlyFrame.index.values[1:])] 
+    Zipper = [[(slope, intercept, start, end) for slope, intercept, start, end in zip(Col1, Col2, HourlyFrame.index.values[:-1], HourlyFrame.index.values[1:])]
               for Col1, Col2 in zip(Slope, Intercept)]
     LinearEquationFrame = pd.DataFrame(data={
         "LineEqn_{}".format(HourlyFrame.columns.values[Ind]): Zipper[Ind] for Ind in range(len(Zipper))
         })
     return(LinearEquationFrame)
-    
-def computeIntegrals(LinearEquationsFrame):    
+
+def computeIntegrals(LinearEquationsFrame):
     """
     Function responsible for computing the integral of the linear equation between two
     consecutive time points
@@ -153,7 +153,7 @@ def computeIntegrals(LinearEquationsFrame):
 
     Returns
     -------
-    A single dataframe containing the integral values (Area under curve) for the respective 
+    A single dataframe containing the integral values (Area under curve) for the respective
     linear equation. Between consecutive time points.
 
     """
@@ -164,10 +164,6 @@ def computeIntegrals(LinearEquationsFrame):
         "Integral_{}".format(ColNames[Ind].split("_")[1]):IntegralList[Ind] for Ind in range(len(IntegralList)) 
         })
     return(IntegralFrame)
-    
-        
-    
-    
 
-        
-            
+def computeBetweenLabelVectorNorm(PositionalFrame, ListOfLabels):
+    pass
