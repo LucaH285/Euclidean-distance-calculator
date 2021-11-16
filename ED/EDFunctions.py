@@ -132,9 +132,10 @@ def computeLinearEquations(HourlyFrame):
 
     """
     SlopeFunction = lambda Column: (((Column[Ind2] - Column[Ind1])/(Ind2 - Ind1)) for Ind1, Ind2 in zip(Column.index.values[:-1], Column.index.values[1:]))
-    InterceptFunction = lambda Column, Slopes: ((Column[Ind] - Slopes[Ind]*Ind) for Ind in range(len(Slopes)))
     Slope = [list(SlopeFunction(HourlyFrame[Cols])) for Cols in HourlyFrame]
-    Intercept = [list(InterceptFunction(HourlyFrame[Cols], Slope[rng])) for Cols, rng in zip(HourlyFrame, range(len(Slope)))]
+    InterceptFunction = lambda Column, Slopes, Time: ((ColVals - (SlopeVals * TimeVals)) 
+                                                      for ColVals, SlopeVals, TimeVals in zip(Column, Slopes, Time))
+    Intercept = [list(InterceptFunction(HourlyFrame[Cols], Slope[rng], list(HourlyFrame.index.values))) for Cols, rng in zip(HourlyFrame, range(len(Slope)))]
     Zipper = [[(slope, intercept, start, end) for slope, intercept, start, end in zip(Col1, Col2, HourlyFrame.index.values[:-1], HourlyFrame.index.values[1:])]
               for Col1, Col2 in zip(Slope, Intercept)]
     LinearEquationFrame = pd.DataFrame(data={
@@ -165,5 +166,4 @@ def computeIntegrals(LinearEquationsFrame):
         })
     return(IntegralFrame)
 
-def computeBetweenLabelVectorNorm(PositionalFrame, ListOfLabels):
-    pass
+

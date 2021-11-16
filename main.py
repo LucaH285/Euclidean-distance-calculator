@@ -8,22 +8,21 @@ from ED import FileImport
 from ED import EDFunctions
 from abc import ABC, abstractmethod
 from Graphs import GraphFunctions
+from VectorCalculations import VectorFunctions
 #import pandas
 import os
 import warnings
 import shutil
 import numpy as np
+import pandas as pd
 import time
-
-"""
-Structure the code such that this program is executed per file Input
-Files should be retrieved from another python program that includes the CLI
-"""
+import click
 
 
 class loadPreprocess(object):
 
     BodyPartList = []
+    PreProcessedFrames = []
 
     def __init__(self, FilePath, PValCutoff, FPS):
         self.Source = FilePath
@@ -53,13 +52,13 @@ class loadPreprocess(object):
                 raise(TypeError("Please check your input files, the body parts between {0} and {1} are not equal".format(Lists1, Lists2)))
             else:
                 pass
-        return("Checked body parts for equivalency")
+        print("Checked body parts for equivalency")
+        return(self.BodyPartList)
 
-    def computeEuclideanDistance(self):
-        PreprocessedFrames = self.preprocess()
-        print(self.checkBodyPartList())
-        FrameList = [[EDFunctions.computeEuclideanDistance(Frames, self.BodyPartList[0]) for Frames in File] for File in PreprocessedFrames]
-        return(FrameList)
+    def __call__(self):
+        PreProcessedFrames = self.preprocess()
+        BodyParts = self.checkBodyPartList()
+        return(PreProcessedFrames, BodyParts)
 
 class computations(ABC):
     @abstractmethod
@@ -75,11 +74,50 @@ class computationsWithExport(computations):
     def compute(self, InputFileList):
         pass
 
+class computationsExportAndReorientAxis(computations):
     @abstractmethod
-    def reorientAxis(self, InputFileList):
+    def compute(self, InputFileList):
         pass
 
-class createHourlySum(computationsWithExport):
+    @abstractmethod
+    def reorientAxis(self, InputFileList, ReIndex = []):
+        pass
+
+    @abstractmethod
+    def exportFunction(self):
+        pass
+
+
+class computeEuclideanDistance(computationsWithExport):
+    
+    ListOfFrames = []
+    
+    def __init__(self, ExportFilePath = "", BodyPartList = []):
+        self.Source = ExportFilePath
+        self.BodyParts = BodyPartList
+        
+    def compute(self, InputFileList):
+        FrameList = [[EDFunctions.computeEuclideanDistance(Frames, self.BodyParts) for Frames in File] for File in InputFileList]
+        self.ListOfFrames = FrameList
+        return(FrameList)
+    
+    def exportFunction(self):
+        if os.path.isdir(self.Source) is True:
+            #Parent folder creation, this should not change
+            Path = "Euclidean_Distances"
+            Dir = os.path.join(self.Source, Path)
+            if os.path.exists(Dir) is False:
+                os.mkdir(Dir)
+            else:
+                shutil.rmtree(Dir)
+                os.mkdir(Dir)
+                print("Euclidean distance directory exits, overwriting")
+            for Index, Files in enumerate(self.ListOfFrames):
+                Files.to_csv("{0}/EDFrame_{1}.csv".format(Dir, Index))
+        elif os.path.isdir(self.Source) is False:
+            warnings.warn("No source entered for Euclidean distance frame exports, passing export")
+
+class createHourlySum(computationsExportAndReorientAxis):
 
     ListOfFrames = []
 
@@ -88,11 +126,27 @@ class createHourlySum(computationsWithExport):
 
     def compute(self, InputFileList):
         HourlySumLists = [EDFunctions.computeHourlySums(FileList) for FileList in InputFileList]
-        self.ListOfFrames.append(HourlySumLists)
+        for Frames in HourlySumLists:
+            self.ListOfFrames.append(Frames)
         return(HourlySumLists)
 
-    def reorientAxis(self, InputFileList):
-        pass
+    def reorientAxis(self, InputFileList, ReIndex):
+        """
+        Function split into 2 parts, first checks that all frames contain 24 hr of footage - raise error if this is not the case
+        If the files pass this check, then reorient the axis 
+        """
+        for Index, Frames in enumerate(InputFileList):
+            if (len(list(Frames.index.values)) == len(ReIndex)) and (sorted(list(Frames.index.values)) == sorted(ReIndex)):
+                Frames = Frames.reindex(ReIndex)
+                self.ListOfFrames[Index] = Frames
+            elif (len(list(Frames.index.values)) == len(ReIndex)) and (sorted(list(Frames.index.values)) != sorted(ReIndex)):
+                print("Assigning custom index values: {}. Reformatting hours of the day".format(ReIndex))
+                Frames["Index"] = ReIndex
+                Frames = Frames.set_index(["Index"], drop=True)
+                self.ListOfFrames[Index] = Frames
+            else:
+                raise(IndexError("Index length does not match frame index length, either pass a correctly sized index list or leave blank"))
+        return(self.ListOfFrames)
 
     def exportFunction(self):
         if os.path.isdir(self.Source) is True:
@@ -106,7 +160,7 @@ class createHourlySum(computationsWithExport):
                 os.mkdir(Dir)
                 print("Hourly Sum directory exits, overwriting")
             for Index, Files in enumerate(self.ListOfFrames):
-                Files[0].to_csv("{0}/SumFrame_{1}.csv".format(Dir, Index))
+                Files.to_csv("{0}/SumFrame_{1}.csv".format(Dir, Index))
         elif os.path.isdir(self.Source) is False:
             warnings.warn("No source entered for hourly sum frame exports, passing export")
 
@@ -124,7 +178,8 @@ class computeIntegrals(computationsWithExport):
 
     def compute(self, InputFileList):
         IntegralFrame = [EDFunctions.computeIntegrals(Frames) for Frames in InputFileList]
-        self.ListOfFrames.append(IntegralFrame)
+        for Frames in IntegralFrame:
+            self.ListOfFrames.append(Frames)
         return(IntegralFrame)
 
     def exportFunction(self):
@@ -139,35 +194,96 @@ class computeIntegrals(computationsWithExport):
                 os.mkdir(Dir)
                 print("Integral directory exits, overwriting")
             for Index, Files in enumerate(self.ListOfFrames):
-                Files[0].to_csv("{0}/IntegralFrame_{1}.csv".format(Dir, Index))
+                Files.to_csv("{0}/IntegralFrame_{1}.csv".format(Dir, Index))
         elif os.path.isdir(self.Source) is False:
             warnings.warn("No source entered for hourly Integral Frame exports, passing export")
+         
+class residualComputations(ABC):
+    @abstractmethod
+    def residualcomputation(self, InputFileList):
+        pass
+    
+class residualComputationsWithExport(residualComputations):
+    @abstractmethod
+    def residualcomputation(self, InputFileList):
+        pass
+    
+    @abstractmethod
+    def exportFunction(self):
+        pass
+    
+class computeAverageObjectPosition(residualComputations):
+    def __init__(self, LabelsOfInterest = [], AllLabels = []):
+        self.ObjectLabels = LabelsOfInterest
+        self.Labels = AllLabels
+        
+    def residualcomputation(self, InputFileList):
+        """
+        Input file list should be the positional coordinates of each CSV.
+        Should pass the positional data from loadpreprocess class.
+        
+        Split into an initial preprocessing step, then passed to functions file where the average
+        coordinates of the stationary objects are computed and returned per file.
+        """
+        if set(self.ObjectLabels).issubset(self.Labels) is True:
+            ColsToUse = [Str for StrInit in self.Labels for Str in [StrInit]*2]
+            Reset2ColNames = [[] for _ in range(len(InputFileList))]
+            for Ind, Files in enumerate(InputFileList):
+                for Frames in Files:
+                    ColsToDrop = [Cols for Cols in Frames.columns.values if Cols % 3 == 0]
+                    Frames = Frames.drop(ColsToDrop, axis = 1)
+                    Frames = Frames.rename(columns={Cols:ColsToUse[Ind] for Cols, Ind in zip(Frames.columns.values, range(len(ColsToUse)))})
+                    Reset2ColNames[Ind].append(Frames)
+        else:
+            raise(ValueError("Labels in the labels of interest do not match all of the labels tracked for this experiment, please check your input"))
+
+class vectorComputations(ABC):
+    @abstractmethod
+    def vectorCompute(self, Inputs):
+        pass
+    
+class computeSkeleton(vectorComputations):
+    def vectorCompute(self, Inputs):
+        """
+        Input here should be preprocessed dataframes.
+        """
+        for Frames in Inputs:
+            CreateSkeleton = VectorFunctions.computeLabelVectors(Frames)
 
 class MainGraphs(ABC):
     @abstractmethod
-    def sendToGraph(self, InputFileList, GenotypeIdentifier, SexIdentifier):
-        pass
-
-    @abstractmethod
-    def sendToGraph_Generic(self, InputFileList):
+    def sendToGraph(self, InputFileList, GenotypeIdentifier, SexIdentifier, BodyPart):
         pass
 
 class linePlot(MainGraphs):
-    def sendToGraph(self, InputFile, GenotypeIdentifier, SexIdentifier):
-        Graph = GraphFunctions.lineplot(InputFile)
+    def sendToGraph(self, InputFile, GenotypeIdentifier, SexIdentifier, BodyPart):
+        Graph = GraphFunctions.lineplot_forHourlySum(InputFile, GenotypeIdentifier, SexIdentifier, BodyPart)
         return(Graph)
+    
+class integralPlot(MainGraphs):
+    def sendToGraph(self, InputFileList, GenotypeIdentifier, SexIdentifier, BodyPart):
+        pass
 
-
+      
 if __name__=="__main__":
-    FilePath=["/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001"]
+    FilePath=[r'F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels']
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
-
-    EuclideanDistances = Class.computeEuclideanDistance()
+    PreProcessedData = Class.__call__()
+    
+    EuclideanDistances = computeEuclideanDistance(BodyPartList = PreProcessedData[1][0]).compute(InputFileList=PreProcessedData[0])
+    Export = computeEuclideanDistance(ExportFilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels").exportFunction()
+    
     computeSums = createHourlySum().compute(InputFileList = EuclideanDistances)
-    Export = createHourlySum(ExportFilePath="/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001").exportFunction()
-
+    #Structure so that if called the computesums variable is replaced with the reindexed frame list.
+    computeSums = createHourlySum().reorientAxis(InputFileList=computeSums, ReIndex=[ 16, 17, 18, 19, 20, 21, 22, 23, 8, 9, 10, 11, 12, 13, 14, 15])
+    Export2 = createHourlySum(ExportFilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels").exportFunction()
+    
     computeLinearEqn = createLinearEquations().compute(InputFileList=computeSums)
-    computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
-    Export2 = computeIntegrals(ExportFilePath="/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001").exportFunction()
 
-    #linePlot().sendToGraph(InputFile = computeSums, GenotypeIdentifier = ["WT"], SexIdentifier = ["Male"])
+    computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
+    Export3 = computeIntegrals(ExportFilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels").exportFunction()
+
+    computeAverageObjectPosition(LabelsOfInterest = ["Nose"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    #Vectors = computeSkeleton().vectorCompute(Inputs = Class.returnPreprocessed())
+
+    linePlot().sendToGraph(InputFile = computeSums, GenotypeIdentifier = ["WT", "KO"], SexIdentifier = ["Male", "Male"], BodyPart = "Body")
