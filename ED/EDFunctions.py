@@ -8,6 +8,7 @@ import pandas as pd
 from collections import OrderedDict
 import numpy as np
 from scipy.integrate import quad
+import time
 
 def preprocessor(DataFrame):
     """
@@ -133,7 +134,7 @@ def computeLinearEquations(HourlyFrame):
     """
     SlopeFunction = lambda Column: (((Column[Ind2] - Column[Ind1])/(Ind2 - Ind1)) for Ind1, Ind2 in zip(Column.index.values[:-1], Column.index.values[1:]))
     Slope = [list(SlopeFunction(HourlyFrame[Cols])) for Cols in HourlyFrame]
-    InterceptFunction = lambda Column, Slopes, Time: ((ColVals - (SlopeVals * TimeVals)) 
+    InterceptFunction = lambda Column, Slopes, Time: ((ColVals - (SlopeVals * TimeVals))
                                                       for ColVals, SlopeVals, TimeVals in zip(Column, Slopes, Time))
     Intercept = [list(InterceptFunction(HourlyFrame[Cols], Slope[rng], list(HourlyFrame.index.values))) for Cols, rng in zip(HourlyFrame, range(len(Slope)))]
     Zipper = [[(slope, intercept, start, end) for slope, intercept, start, end in zip(Col1, Col2, HourlyFrame.index.values[:-1], HourlyFrame.index.values[1:])]
@@ -162,8 +163,35 @@ def computeIntegrals(LinearEquationsFrame):
     IntegralList = [[quad(Integral, Vals[2], Vals[3], args = (Vals[0], Vals[1]))[0] for Vals in LinearEquationsFrame[Cols]] for Cols in LinearEquationsFrame]
     ColNames = LinearEquationsFrame.columns.values
     IntegralFrame = pd.DataFrame(data={
-        "Integral_{}".format(ColNames[Ind].split("_")[1]):IntegralList[Ind] for Ind in range(len(IntegralList)) 
+        "Integral_{}".format(ColNames[Ind].split("_")[1]):IntegralList[Ind] for Ind in range(len(IntegralList))
         })
     return(IntegralFrame)
 
+def computeAveragePositionStationary(InputFrame, StationaryObjectsList):
+    StationaryDict = {StationaryObjectsList[Ind]: (0, 0) for Ind in range(len(StationaryObjectsList))}
+    duplicates = [Cols for Cols in InputFrame.columns.values]
+    #Know that coordinate data will only ever be 2D
+    #Should not operate under that apriori assumption
+    for Ind, Cols in enumerate(duplicates):
+        if Cols in duplicates and Cols + "_x" not in duplicates:
+            duplicates[duplicates.index(Cols)] = Cols + "_x"
+        else:
+            duplicates[duplicates.index(Cols)] = Cols + "_y"
+    InputFrame.columns = duplicates
+    print(InputFrame)
+    print(StationaryDict)
+    print(StationaryDict["nose"])
+    print(StationaryDict["nose"][0])
+    print(InputFrame["nose_x"].mean())
+    for Cols in StationaryObjectsList:
+        XCoord = Cols + "_x"
+        YCoord = Cols + "_y"
+        breakpoint()
+        StationaryDict[Cols][0], StationaryDict[Cols][1] = AverageX, AverageY
+    print(StationaryDict)
+    breakpoint()
 
+
+
+    print(StationaryDict)
+    breakpoint()

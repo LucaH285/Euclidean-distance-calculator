@@ -89,18 +89,18 @@ class computationsExportAndReorientAxis(computations):
 
 
 class computeEuclideanDistance(computationsWithExport):
-    
+
     ListOfFrames = []
-    
+
     def __init__(self, ExportFilePath = "", BodyPartList = []):
         self.Source = ExportFilePath
         self.BodyParts = BodyPartList
-        
+
     def compute(self, InputFileList):
         FrameList = [[EDFunctions.computeEuclideanDistance(Frames, self.BodyParts) for Frames in File] for File in InputFileList]
         self.ListOfFrames = FrameList
         return(FrameList)
-    
+
     def exportFunction(self):
         if os.path.isdir(self.Source) is True:
             #Parent folder creation, this should not change
@@ -133,7 +133,7 @@ class createHourlySum(computationsExportAndReorientAxis):
     def reorientAxis(self, InputFileList, ReIndex):
         """
         Function split into 2 parts, first checks that all frames contain 24 hr of footage - raise error if this is not the case
-        If the files pass this check, then reorient the axis 
+        If the files pass this check, then reorient the axis
         """
         for Index, Frames in enumerate(InputFileList):
             if (len(list(Frames.index.values)) == len(ReIndex)) and (sorted(list(Frames.index.values)) == sorted(ReIndex)):
@@ -197,31 +197,31 @@ class computeIntegrals(computationsWithExport):
                 Files.to_csv("{0}/IntegralFrame_{1}.csv".format(Dir, Index))
         elif os.path.isdir(self.Source) is False:
             warnings.warn("No source entered for hourly Integral Frame exports, passing export")
-         
+
 class residualComputations(ABC):
     @abstractmethod
     def residualcomputation(self, InputFileList):
         pass
-    
+
 class residualComputationsWithExport(residualComputations):
     @abstractmethod
     def residualcomputation(self, InputFileList):
         pass
-    
+
     @abstractmethod
     def exportFunction(self):
         pass
-    
+
 class computeAverageObjectPosition(residualComputations):
     def __init__(self, LabelsOfInterest = [], AllLabels = []):
         self.ObjectLabels = LabelsOfInterest
         self.Labels = AllLabels
-        
+
     def residualcomputation(self, InputFileList):
         """
         Input file list should be the positional coordinates of each CSV.
         Should pass the positional data from loadpreprocess class.
-        
+
         Split into an initial preprocessing step, then passed to functions file where the average
         coordinates of the stationary objects are computed and returned per file.
         """
@@ -234,14 +234,24 @@ class computeAverageObjectPosition(residualComputations):
                     Frames = Frames.drop(ColsToDrop, axis = 1)
                     Frames = Frames.rename(columns={Cols:ColsToUse[Ind] for Cols, Ind in zip(Frames.columns.values, range(len(ColsToUse)))})
                     Reset2ColNames[Ind].append(Frames)
+            #Rename all columns to x, y
+            #Call them in the main function as: for Cols + "_x", Cols + "_y" in objectlabels
+            AverageStationaryPosition = [[EDFunctions.computeAveragePositionStationary(Frames, self.ObjectLabels) for Frames in Files] for Files in Reset2ColNames]
+            #Return here is a list of lists containing frames with the average coordinate position of stationary objects
+            #This will be list of 1 row frames with n columns (depending on how many objects of interest were defined)
+            return(AverageStationaryPosition)
         else:
             raise(ValueError("Labels in the labels of interest do not match all of the labels tracked for this experiment, please check your input"))
+
+class angularVelocity(residualComputations):
+    def residualcomputation(self, InputFile):
+        return("Not Finished")
 
 class vectorComputations(ABC):
     @abstractmethod
     def vectorCompute(self, Inputs):
         pass
-    
+
 class computeSkeleton(vectorComputations):
     def vectorCompute(self, Inputs):
         """
@@ -259,31 +269,32 @@ class linePlot(MainGraphs):
     def sendToGraph(self, InputFile, GenotypeIdentifier, SexIdentifier, BodyPart):
         Graph = GraphFunctions.lineplot_forHourlySum(InputFile, GenotypeIdentifier, SexIdentifier, BodyPart)
         return(Graph)
-    
+
 class integralPlot(MainGraphs):
     def sendToGraph(self, InputFileList, GenotypeIdentifier, SexIdentifier, BodyPart):
         pass
 
-      
+
 if __name__=="__main__":
-    FilePath=[r'F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels']
+    FilePath=["/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001"]
+    OutPath = "/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001/Outputs"
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
     PreProcessedData = Class.__call__()
-    
-    EuclideanDistances = computeEuclideanDistance(BodyPartList = PreProcessedData[1][0]).compute(InputFileList=PreProcessedData[0])
-    Export = computeEuclideanDistance(ExportFilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels").exportFunction()
-    
-    computeSums = createHourlySum().compute(InputFileList = EuclideanDistances)
+
+    #EuclideanDistances = computeEuclideanDistance(BodyPartList = PreProcessedData[1][0]).compute(InputFileList=PreProcessedData[0])
+    #Export = computeEuclideanDistance(ExportFilePath=OutPath).exportFunction()
+
+    #computeSums = createHourlySum().compute(InputFileList = EuclideanDistances)
     #Structure so that if called the computesums variable is replaced with the reindexed frame list.
-    computeSums = createHourlySum().reorientAxis(InputFileList=computeSums, ReIndex=[ 16, 17, 18, 19, 20, 21, 22, 23, 8, 9, 10, 11, 12, 13, 14, 15])
-    Export2 = createHourlySum(ExportFilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels").exportFunction()
-    
-    computeLinearEqn = createLinearEquations().compute(InputFileList=computeSums)
+    #computeSums = createHourlySum().reorientAxis(InputFileList=computeSums, ReIndex=[ 16, 17, 18, 19, 20, 21, 22, 23, 8, 9, 10, 11, 12, 13, 14, 15])
+    #Export2 = createHourlySum(ExportFilePath=OutPath).exportFunction()
 
-    computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
-    Export3 = computeIntegrals(ExportFilePath=r"F:\work\TestVideos_NewNetwork\20191206-20200507T194022Z-001\20191206\RawVids\NewLabels").exportFunction()
+    #computeLinearEqn = createLinearEquations().compute(InputFileList=computeSums)
 
-    computeAverageObjectPosition(LabelsOfInterest = ["Nose"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    #computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
+    #Export3 = computeIntegrals(ExportFilePath=OutPath).exportFunction()
+
+    computeAverageObjectPosition(LabelsOfInterest = ["nose", "body"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
     #Vectors = computeSkeleton().vectorCompute(Inputs = Class.returnPreprocessed())
 
     linePlot().sendToGraph(InputFile = computeSums, GenotypeIdentifier = ["WT", "KO"], SexIdentifier = ["Male", "Male"], BodyPart = "Body")
