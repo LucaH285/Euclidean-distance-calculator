@@ -167,8 +167,9 @@ def computeIntegrals(LinearEquationsFrame):
         })
     return(IntegralFrame)
 
+#These should be moved to a residual computations folder
 def computeAveragePositionStationary(InputFrame, StationaryObjectsList):
-    StationaryDict = {StationaryObjectsList[Ind]: (0, 0) for Ind in range(len(StationaryObjectsList))}
+    StationaryDict = {StationaryObjectsList[Ind]: [0, 0] for Ind in range(len(StationaryObjectsList))}
     duplicates = [Cols for Cols in InputFrame.columns.values]
     #Know that coordinate data will only ever be 2D
     #Should not operate under that apriori assumption
@@ -178,20 +179,14 @@ def computeAveragePositionStationary(InputFrame, StationaryObjectsList):
         else:
             duplicates[duplicates.index(Cols)] = Cols + "_y"
     InputFrame.columns = duplicates
-    print(InputFrame)
-    print(StationaryDict)
-    print(StationaryDict["nose"])
-    print(StationaryDict["nose"][0])
-    print(InputFrame["nose_x"].mean())
     for Cols in StationaryObjectsList:
         XCoord = Cols + "_x"
         YCoord = Cols + "_y"
-        breakpoint()
-        StationaryDict[Cols][0], StationaryDict[Cols][1] = AverageX, AverageY
-    print(StationaryDict)
-    breakpoint()
-
-
-
-    print(StationaryDict)
-    breakpoint()
+        AverageX = np.average(list(pd.to_numeric(InputFrame[XCoord], downcast="float")))
+        AverageY = np.average(list(pd.to_numeric(InputFrame[YCoord], downcast="float")))
+        StationaryDict[Cols][0] = AverageX
+        StationaryDict[Cols][1] = AverageY
+    StationaryFrame = pd.DataFrame(data=StationaryDict)
+    StationaryFrame = StationaryFrame.set_index(pd.Series(["x", "y"]))
+    return(StationaryFrame)
+    

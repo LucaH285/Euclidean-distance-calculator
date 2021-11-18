@@ -32,4 +32,9 @@ def lineplot_forHourlySum(DataFrames, Genotype, Sex, BodyPart):
 def AreaUnderCurve(DataFrames, Genotype, Sex, BodyPart):
     pass
 
-
+def genericGraph(XVals, YVals, Xlab, Ylab, Title):
+    mp.plot(XVals, YVals)
+    mp.xlabel(Xlab)
+    mp.ylabel(Ylab)
+    mp.title(Title)
+    mp.show()

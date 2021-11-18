@@ -57,6 +57,10 @@ class loadPreprocess(object):
 
     def __call__(self):
         PreProcessedFrames = self.preprocess()
+        XVal = list(pd.to_numeric(PreProcessedFrames[0][0].loc[20000:27000, 4], downcast="float"))
+        YVal = [i for i in range(len(XVal))]#list(pd.to_numeric(PreProcessedFrames[0][0].loc[20000:29000, 2], downcast = "float"))
+        GraphFunctions.genericGraph(YVal, XVal, Xlab="Time (arbitrary)", Ylab="X-position of Head", Title="Time vs. Position")
+        breakpoint()
         BodyParts = self.checkBodyPartList()
         return(PreProcessedFrames, BodyParts)
 
@@ -86,7 +90,6 @@ class computationsExportAndReorientAxis(computations):
     @abstractmethod
     def exportFunction(self):
         pass
-
 
 class computeEuclideanDistance(computationsWithExport):
 
@@ -244,7 +247,25 @@ class computeAverageObjectPosition(residualComputations):
             raise(ValueError("Labels in the labels of interest do not match all of the labels tracked for this experiment, please check your input"))
 
 class angularVelocity(residualComputations):
+    def __init__(self, ListOfFrames, drawVectorsFrom = [], drawVectorsTo = []):
+        self.stationaryObjects = ListOfFrames
+        self.startLabels = drawVectorsFrom
+        self.endLabels = drawVectorsTo
+    
     def residualcomputation(self, InputFile):
+        """
+        First create a cross cage vectors and find the point of intersection of the 2
+        lines.
+        
+        Whole cage circling behavior
+        """
+        StationaryValues = list(self.stationaryObjects[0].columns.values)
+        if set(self.startLabels).issubset(StationaryValues) and set(self.endLabels).issubset(StationaryValues):
+            # CreateVector = lambda 
+            # for Frames in 
+            pass
+        else:
+            raise(KeyError("Inputted stationary labels are not a part of the stationary values tracked"))
         return("Not Finished")
 
 class vectorComputations(ABC):
@@ -276,8 +297,8 @@ class integralPlot(MainGraphs):
 
 
 if __name__=="__main__":
-    FilePath=["/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001"]
-    OutPath = "/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001/Outputs"
+    FilePath=[r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv']
+    OutPath = ""
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
     PreProcessedData = Class.__call__()
 
@@ -294,7 +315,8 @@ if __name__=="__main__":
     #computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
     #Export3 = computeIntegrals(ExportFilePath=OutPath).exportFunction()
 
-    computeAverageObjectPosition(LabelsOfInterest = ["nose", "body"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    StationaryFrames = computeAverageObjectPosition(LabelsOfInterest = ["Nose"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    print(StationaryFrames)
     #Vectors = computeSkeleton().vectorCompute(Inputs = Class.returnPreprocessed())
 
-    linePlot().sendToGraph(InputFile = computeSums, GenotypeIdentifier = ["WT", "KO"], SexIdentifier = ["Male", "Male"], BodyPart = "Body")
+    #linePlot().sendToGraph(InputFile = computeSums, GenotypeIdentifier = ["WT", "KO"], SexIdentifier = ["Male", "Male"], BodyPart = "Body")

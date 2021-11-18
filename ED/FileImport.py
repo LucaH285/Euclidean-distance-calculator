@@ -40,7 +40,7 @@ def ImportFunction_IfFile(Path):
     -------
     List of length 1.
     """
-    CSVFileList = [pd.read_csv(Path)]
+    CSVFileList = [pd.read_csv(Path, low_memory=False)]
     return(CSVFileList)
 
 
