@@ -15,6 +15,7 @@ import warnings
 import shutil
 import numpy as np
 import pandas as pd
+import itertools
 import time
 import click
 
@@ -57,10 +58,10 @@ class loadPreprocess(object):
 
     def __call__(self):
         PreProcessedFrames = self.preprocess()
-        XVal = list(pd.to_numeric(PreProcessedFrames[0][0].loc[20000:27000, 4], downcast="float"))
+        print(self.BodyPartList[0])
+        XVal = list(pd.to_numeric(PreProcessedFrames[0][1].loc[0:len(PreProcessedFrames[0][1].index.values), 2], downcast="float"))
         YVal = [i for i in range(len(XVal))]#list(pd.to_numeric(PreProcessedFrames[0][0].loc[20000:29000, 2], downcast = "float"))
-        GraphFunctions.genericGraph(YVal, XVal, Xlab="Time (arbitrary)", Ylab="X-position of Head", Title="Time vs. Position")
-        breakpoint()
+        #GraphFunctions.genericGraph(YVal, XVal, Xlab="Time (arbitrary)", Ylab="X-position of Head", Title="Time vs. Position")
         BodyParts = self.checkBodyPartList()
         return(PreProcessedFrames, BodyParts)
 
@@ -246,27 +247,52 @@ class computeAverageObjectPosition(residualComputations):
         else:
             raise(ValueError("Labels in the labels of interest do not match all of the labels tracked for this experiment, please check your input"))
 
-class angularVelocity(residualComputations):
-    def __init__(self, ListOfFrames, drawVectorsFrom = [], drawVectorsTo = []):
-        self.stationaryObjects = ListOfFrames
+class createStationaryVectors(residualComputations):
+    def __init__(self, drawVectorsFrom = [], drawVectorsTo = []):
         self.startLabels = drawVectorsFrom
         self.endLabels = drawVectorsTo
-    
+
     def residualcomputation(self, InputFile):
         """
-        First create a cross cage vectors and find the point of intersection of the 2
+        First create cross cage vectors and find the point of intersection of the 2
         lines.
-        
+        Then calculate angular velocity as dTheta/dT
+
         Whole cage circling behavior
         """
-        StationaryValues = list(self.stationaryObjects[0].columns.values)
-        if set(self.startLabels).issubset(StationaryValues) and set(self.endLabels).issubset(StationaryValues):
-            # CreateVector = lambda 
-            # for Frames in 
-            pass
+        StationaryValues = list(InputFile[0][0].columns.values)
+        if ((set(self.startLabels).issubset(StationaryValues) and set(self.endLabels).issubset(StationaryValues)) and (len(StationaryValues) % 2 == 0)):
+            #return 2-tuple acting as direction vector
+            ComputedStationaryVecs = [[] for _ in range(len(InputFile))]
+            #return a list of vectors containing the position vector and direction vector
+            Vectors = lambda StartLabel, EndLabel: [Vj - Vi for Vi, Vj in zip(StartLabel, EndLabel)]
+            for Ind, Files in enumerate(InputFile):
+                LineEqn = []
+                for Frames, SCols, ECols in itertools.product(Files, self.startLabels, self.endLabels):
+                    Vector = Vectors(Frames[SCols], Frames[ECols])
+                    LineEqn.append((list(Frames[SCols]), Vector))
+                print(LineEqn)
+                time.sleep(5)
+                ComputedStationaryVecs[Ind].append(LineEqn)
+
+            print(np.array(ComputedStationaryVecs)[0][0])
+            breakpoint()
+
+            return(ComputedStationaryVecs)
         else:
             raise(KeyError("Inputted stationary labels are not a part of the stationary values tracked"))
-        return("Not Finished")
+
+class computePointOfIntersection(residualComputations):
+    def residualcomputation(self, InputFile):
+
+        pass
+
+class sinusodialRegression(residualComputations):
+    def __init__(self, Labels = ""):
+        self.LabelToTrack = Labels
+
+    def residualComputations(self, InputFileList):
+        pass
 
 class vectorComputations(ABC):
     @abstractmethod
@@ -281,23 +307,39 @@ class computeSkeleton(vectorComputations):
         for Frames in Inputs:
             CreateSkeleton = VectorFunctions.computeLabelVectors(Frames)
 
-class MainGraphs(ABC):
+class MainGraph_ED(ABC):
     @abstractmethod
     def sendToGraph(self, InputFileList, GenotypeIdentifier, SexIdentifier, BodyPart):
         pass
 
-class linePlot(MainGraphs):
+class linePlot(MainGraph_ED):
     def sendToGraph(self, InputFile, GenotypeIdentifier, SexIdentifier, BodyPart):
         Graph = GraphFunctions.lineplot_forHourlySum(InputFile, GenotypeIdentifier, SexIdentifier, BodyPart)
         return(Graph)
 
-class integralPlot(MainGraphs):
+class integralPlot(MainGraph_ED):
     def sendToGraph(self, InputFileList, GenotypeIdentifier, SexIdentifier, BodyPart):
         pass
 
+class graphGeneric(ABC):
+    @abstractmethod
+    def sendToGraph_Generic(XVals, YVals):
+        pass
+
+class linePlot_Generic(graphGeneric):
+    def __init__(self, Xlab, Ylab, Title):
+        self.Xlab = Xlab
+        self.Ylab = Ylab
+        self.Title = Title
+
+    def sendToGraph(XVals, YVals):
+        Graphs = GraphFunctions.genericGraph(XVals, YVals, self.Xlab, self.Ylab, self.Title)
+        #probably don't need this as a variable.
+        return(Graphs)
+
 
 if __name__=="__main__":
-    FilePath=[r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv']
+    FilePath=["/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001"]
     OutPath = ""
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
     PreProcessedData = Class.__call__()
@@ -315,7 +357,8 @@ if __name__=="__main__":
     #computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
     #Export3 = computeIntegrals(ExportFilePath=OutPath).exportFunction()
 
-    StationaryFrames = computeAverageObjectPosition(LabelsOfInterest = ["Nose"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    StationaryFrames = computeAverageObjectPosition(LabelsOfInterest = ["nose", "body", "head", "tail"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    StationaryVectors = createStationaryVectors(drawVectorsFrom = ["nose", "tail"], drawVectorsTo = ["body", "head"]).residualcomputation(StationaryFrames)
     print(StationaryFrames)
     #Vectors = computeSkeleton().vectorCompute(Inputs = Class.returnPreprocessed())
 
