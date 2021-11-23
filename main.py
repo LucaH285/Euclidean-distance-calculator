@@ -9,6 +9,10 @@ from ED import EDFunctions
 from abc import ABC, abstractmethod
 from Graphs import GraphFunctions
 from VectorCalculations import VectorFunctions
+from ResidualCalculations import ResidualFunctions as RF
+from functools import reduce
+import math
+import matplotlib.pyplot as mp
 #import pandas
 import os
 import warnings
@@ -59,9 +63,10 @@ class loadPreprocess(object):
     def __call__(self):
         PreProcessedFrames = self.preprocess()
         print(self.BodyPartList[0])
-        XVal = list(pd.to_numeric(PreProcessedFrames[0][1].loc[0:len(PreProcessedFrames[0][1].index.values), 2], downcast="float"))
+        Len = len(PreProcessedFrames[0][0])
+        XVal = list(pd.to_numeric(PreProcessedFrames[0][0].loc[Len-10000:Len, 4], downcast="float"))
         YVal = [i for i in range(len(XVal))]#list(pd.to_numeric(PreProcessedFrames[0][0].loc[20000:29000, 2], downcast = "float"))
-        #GraphFunctions.genericGraph(YVal, XVal, Xlab="Time (arbitrary)", Ylab="X-position of Head", Title="Time vs. Position")
+        GraphFunctions.genericGraph(YVal, XVal, Xlab="Time (arbitrary)", Ylab="X-position of Head", Title="Time vs. Position")
         BodyParts = self.checkBodyPartList()
         return(PreProcessedFrames, BodyParts)
 
@@ -215,7 +220,8 @@ class residualComputationsWithExport(residualComputations):
     @abstractmethod
     def exportFunction(self):
         pass
-
+#all the code from this should be moved to a dedicated .py file
+#Move it to residual functions.
 class computeAverageObjectPosition(residualComputations):
     def __init__(self, LabelsOfInterest = [], AllLabels = []):
         self.ObjectLabels = LabelsOfInterest
@@ -267,25 +273,97 @@ class createStationaryVectors(residualComputations):
             #return a list of vectors containing the position vector and direction vector
             Vectors = lambda StartLabel, EndLabel: [Vj - Vi for Vi, Vj in zip(StartLabel, EndLabel)]
             for Ind, Files in enumerate(InputFile):
-                LineEqn = []
-                for Frames, SCols, ECols in itertools.product(Files, self.startLabels, self.endLabels):
-                    Vector = Vectors(Frames[SCols], Frames[ECols])
-                    LineEqn.append((list(Frames[SCols]), Vector))
-                print(LineEqn)
-                time.sleep(5)
-                ComputedStationaryVecs[Ind].append(LineEqn)
-
-            print(np.array(ComputedStationaryVecs)[0][0])
-            breakpoint()
-
+                for Frames in Files:
+                    for SCols, ECols in zip(self.startLabels, self.endLabels):
+                        Vector = Vectors(Frames[SCols], Frames[ECols])
+                        ComputedStationaryVecs[Ind].append((list(Frames[SCols]), Vector))
             return(ComputedStationaryVecs)
         else:
             raise(KeyError("Inputted stationary labels are not a part of the stationary values tracked"))
 
 class computePointOfIntersection(residualComputations):
     def residualcomputation(self, InputFile):
-
-        pass
+        Centroids = []
+        POI = lambda Scalar, VecTuple: [(Posi + (Scalar*Coefj)) for Posi, Coefj in zip(VecTuple[0], VecTuple[1])]
+        for Files in InputFile:
+            for Vecs1, Vecs2 in zip(Files[:-1], Files[1:]):
+                """
+                prepare the vectors for the augmented matrix:
+                    Algorithm
+                    - subtract the position vectors of vector list 1 from vector list 2: Vec1[1] - Vec2[1]
+                    - set up the coefficient matrix using the directional vectors in the vector lists 
+                    - augment the matrix such that the values of the positon vectors are equal to the coefficient matrix
+                    
+                    Coef =[[1, 2]
+                           [3, 4]]
+                    
+                    Position = [[5]
+                                [6]]
+                    
+                """
+                PositionVectors = [(V2 - V1) for V1, V2 in zip(Vecs1[0], Vecs2[0])]
+                CoefficientMatrix = np.array([Vecs1[1], [-1*Vals for Vals in Vecs2[1]]]).T
+                Solution = np.linalg.solve(CoefficientMatrix, PositionVectors)
+                Centroid = POI(Solution[0], Vecs1)
+                Centroids.append(Centroid)
+        CentroidArray = np.array(Centroids)
+        AverageX = 0
+        AverageY = 0
+        for Vals in CentroidArray:
+            AverageX += Vals[0]
+            AverageY += Vals[1]
+        AveragedCentroid = [(AverageX/len(Centroids)).round(3), (AverageY/len(Centroids)).round(3)]
+        return(AveragedCentroid)
+    
+class computeAngularVelocity(residualComputations):
+    def __init__(self, drawToLabel, CentroidCoord, AllLabels, FramesPerSecond):
+        self.Label = drawToLabel
+        self.Centroid = CentroidCoord
+        self.AllLabels = AllLabels
+        self.FPS = FramesPerSecond
+        
+    def residualcomputation(self, InputFile):
+        """
+        First draw the vector from the centroid to the label of interest, from the positional data.
+        Second compute the change in angle over the change in time.
+        """
+        if set([self.Label]).issubset(self.AllLabels):
+            RenamedCols = RF.renameCols(InputFileList=InputFile, BodyParts=self.AllLabels)
+            CreatePositionVectors = lambda XCoords, YCoords: [[x, y] for x,y in zip(XCoords, YCoords)]
+            ComputeCentroidLabelVec = lambda CentroidCoord, Coords: [[PosVecs[i] - CentroidCoord[j] for i, j in zip(range(len(PosVecs)), range(len(CentroidCoord)))] for PosVecs in Coords]
+            ComputeVectorAngles = lambda Vectors: [math.degrees(np.arccos((np.dot(Vec1, Vec2))/(np.linalg.norm(Vec1)*np.linalg.norm(Vec2)))) for Vec1, Vec2 in zip(Vectors[:-1], Vectors[1:])]
+            for Ind, Files in enumerate(RenamedCols):
+                for Frames in Files:
+                    PosVecs = CreatePositionVectors(XCoords=list(pd.to_numeric(Frames[self.Label+"_x"], downcast="float")), YCoords=list(pd.to_numeric(Frames[self.Label+"_y"], downcast="float")))
+                    CentroidLabelVecs = ComputeCentroidLabelVec(CentroidCoord=self.Centroid, Coords=PosVecs)
+                    dTheta = ComputeVectorAngles(CentroidLabelVecs)
+                    AngularVelocity = [Theta/(1/self.FPS) for Theta in dTheta]
+                    mp.plot([i * 1/30 for i in range(len(AngularVelocity))], AngularVelocity)
+                    mp.xlabel("Time (seconds)")
+                    mp.ylabel("Angular Velocity (dTheta/dT)")
+                    mp.show()
+                    print(AngularVelocity)
+        else:
+            raise(KeyError("Label of interest is not a label that has been tracked by DLC!"))
+   
+class circlingBehavior(residualComputations):
+    def __init__(self, FromLabel, ToLabel, AllLabels):
+        self.LabelsToTrack_From = FromLabel
+        self.LabelsToTrack_To = ToLabel
+        self.AllLabels = AllLabels
+        
+        
+    def residualcomputation(self, InputFileList):
+        if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
+            FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
+            Midpoint = lambda PosVec1, PosVec2: (((1/2) * (PosVec1[i] + PosVec2[j])) for i, j in zip(range(len(PosVec1)), range(len(PosVec2))))
+            for Ind, Files in enumerate()
+            
+            
+        else:
+            pass
+        
+        
 
 class sinusodialRegression(residualComputations):
     def __init__(self, Labels = ""):
@@ -333,13 +411,13 @@ class linePlot_Generic(graphGeneric):
         self.Title = Title
 
     def sendToGraph(XVals, YVals):
-        Graphs = GraphFunctions.genericGraph(XVals, YVals, self.Xlab, self.Ylab, self.Title)
+       # Graphs = GraphFunctions.genericGraph(XVals, YVals, self.Xlab, self.Ylab, self.Title)
         #probably don't need this as a variable.
-        return(Graphs)
-
+        #return(Graphs)
+        pass
 
 if __name__=="__main__":
-    FilePath=["/Users/lucahategan/Desktop/For work/work files/drive-download-20200528T164242Z-001"]
+    FilePath=[r"F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = ""
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
     PreProcessedData = Class.__call__()
@@ -357,9 +435,13 @@ if __name__=="__main__":
     #computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
     #Export3 = computeIntegrals(ExportFilePath=OutPath).exportFunction()
 
-    StationaryFrames = computeAverageObjectPosition(LabelsOfInterest = ["nose", "body", "head", "tail"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
-    StationaryVectors = createStationaryVectors(drawVectorsFrom = ["nose", "tail"], drawVectorsTo = ["body", "head"]).residualcomputation(StationaryFrames)
-    print(StationaryFrames)
+    StationaryFrames = computeAverageObjectPosition(LabelsOfInterest = ["TopWall", "RightWall", "BottomWall", "LeftWall"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    #print(StationaryFrames)
+    StationaryVectors = createStationaryVectors(drawVectorsFrom = ["TopWall", "RightWall"], drawVectorsTo = ["BottomWall", "LeftWall"]).residualcomputation(StationaryFrames)
+    POI = computePointOfIntersection().residualcomputation(InputFile = StationaryVectors)
+    computeAngularVelocity(drawToLabel = "Body", CentroidCoord=POI, AllLabels=PreProcessedData[1][0], FramesPerSecond=30).residualcomputation(InputFile = PreProcessedData[0])
     #Vectors = computeSkeleton().vectorCompute(Inputs = Class.returnPreprocessed())
 
+
+    circling = circlingBehavior(FromLabel="Body", ToLabel="Head", AllLabels=PreProcessedData[1][0]).residualcomputation(InputFileList=PreProcessedData[0])
     #linePlot().sendToGraph(InputFile = computeSums, GenotypeIdentifier = ["WT", "KO"], SexIdentifier = ["Male", "Male"], BodyPart = "Body")
