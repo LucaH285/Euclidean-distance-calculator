@@ -291,15 +291,15 @@ class computePointOfIntersection(residualComputations):
                 prepare the vectors for the augmented matrix:
                     Algorithm
                     - subtract the position vectors of vector list 1 from vector list 2: Vec1[1] - Vec2[1]
-                    - set up the coefficient matrix using the directional vectors in the vector lists 
+                    - set up the coefficient matrix using the directional vectors in the vector lists
                     - augment the matrix such that the values of the positon vectors are equal to the coefficient matrix
-                    
+
                     Coef =[[1, 2]
                            [3, 4]]
-                    
+
                     Position = [[5]
                                 [6]]
-                    
+
                 """
                 PositionVectors = [(V2 - V1) for V1, V2 in zip(Vecs1[0], Vecs2[0])]
                 CoefficientMatrix = np.array([Vecs1[1], [-1*Vals for Vals in Vecs2[1]]]).T
@@ -314,14 +314,14 @@ class computePointOfIntersection(residualComputations):
             AverageY += Vals[1]
         AveragedCentroid = [(AverageX/len(Centroids)).round(3), (AverageY/len(Centroids)).round(3)]
         return(AveragedCentroid)
-    
+
 class computeAngularVelocity(residualComputations):
     def __init__(self, drawToLabel, CentroidCoord, AllLabels, FramesPerSecond):
         self.Label = drawToLabel
         self.Centroid = CentroidCoord
         self.AllLabels = AllLabels
         self.FPS = FramesPerSecond
-        
+
     def residualcomputation(self, InputFile):
         """
         First draw the vector from the centroid to the label of interest, from the positional data.
@@ -345,25 +345,45 @@ class computeAngularVelocity(residualComputations):
                     print(AngularVelocity)
         else:
             raise(KeyError("Label of interest is not a label that has been tracked by DLC!"))
-   
+
 class circlingBehavior(residualComputations):
     def __init__(self, FromLabel, ToLabel, AllLabels):
         self.LabelsToTrack_From = FromLabel
         self.LabelsToTrack_To = ToLabel
         self.AllLabels = AllLabels
-        
-        
+
+
     def residualcomputation(self, InputFileList):
         if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
             FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
-            Midpoint = lambda PosVec1, PosVec2: (((1/2) * (PosVec1[i] + PosVec2[j])) for i, j in zip(range(len(PosVec1)), range(len(PosVec2))))
-            for Ind, Files in enumerate()
-            
-            
+            PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
+            Midpoint = lambda PosVec1, PosVec2: [[(1/2)*(i + j) for i, j in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(PosVec1, PosVec2)]
+            MidpointLabelVector = lambda Midpoint, Coordinate: [[(V2 - V1) for V1, V2 in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(Midpoint, Coordinate)]
+            Theta = lambda Vectors: [math.degrees(np.arccos((np.dot(Vec1, Vec2))/(np.linalg.norm(Vec1)*np.linalg.norm(Vec2)))) for Vec1, Vec2 in zip(Vectors[:-1], Vectors[1:])]
+            for Ind, Files in enumerate(FileList):
+                for Frames in Files:
+                    Coords_From = PositionVectorFunction(Frames[self.LabelsToTrack_From+"_x"], Frames[self.LabelsToTrack_From+"_y"])
+                    Coords_To = PositionVectorFunction(Frames[self.LabelsToTrack_To+"_x"], Frames[self.LabelsToTrack_To+"_y"])
+                    Midpoints = Midpoint(Coords_From, Coords_To)
+                    Vectors = MidpointLabelVector(Midpoints, Coords_From)
+                    
+
+                    # RF.circlingBehaviour2(MidPoints=Midpoints, MidLabelVectors=Vectors, MaxY=1080)
+                    # breakpoint()
+                    
+                    RF.circlingBehaviour(Vectors)
+                    breakpoint()
+                    
+                    Angles = Theta(Vectors)
+                    # print(Midpoints[0:10])
+                    # print(Vectors[0:10])
+                    mp.plot(range(len(Vectors[9200:9500])), [V[0] for V in Vectors[9200:9500]])
+                    mp.show()
+                    Rotations = np.nansum(Angles)/360
+                    print(Rotations)
+                    breakpoint()
         else:
-            pass
-        
-        
+            raise(KeyError("Label(s) of interest not tracked by DLC"))
 
 class sinusodialRegression(residualComputations):
     def __init__(self, Labels = ""):
@@ -417,7 +437,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"D:\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = ""
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
     PreProcessedData = Class.__call__()
@@ -435,11 +455,11 @@ if __name__=="__main__":
     #computeIntegral = computeIntegrals().compute(InputFileList = computeLinearEqn)
     #Export3 = computeIntegrals(ExportFilePath=OutPath).exportFunction()
 
-    StationaryFrames = computeAverageObjectPosition(LabelsOfInterest = ["TopWall", "RightWall", "BottomWall", "LeftWall"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
+    #StationaryFrames = computeAverageObjectPosition(LabelsOfInterest = ["TopWall", "RightWall", "BottomWall", "LeftWall"], AllLabels = PreProcessedData[1][0]).residualcomputation(InputFileList = PreProcessedData[0])
     #print(StationaryFrames)
-    StationaryVectors = createStationaryVectors(drawVectorsFrom = ["TopWall", "RightWall"], drawVectorsTo = ["BottomWall", "LeftWall"]).residualcomputation(StationaryFrames)
-    POI = computePointOfIntersection().residualcomputation(InputFile = StationaryVectors)
-    computeAngularVelocity(drawToLabel = "Body", CentroidCoord=POI, AllLabels=PreProcessedData[1][0], FramesPerSecond=30).residualcomputation(InputFile = PreProcessedData[0])
+    #StationaryVectors = createStationaryVectors(drawVectorsFrom = ["TopWall", "RightWall"], drawVectorsTo = ["BottomWall", "LeftWall"]).residualcomputation(StationaryFrames)
+    #POI = computePointOfIntersection().residualcomputation(InputFile = StationaryVectors)
+    #computeAngularVelocity(drawToLabel = "Head", CentroidCoord=POI, AllLabels=PreProcessedData[1][0], FramesPerSecond=30).residualcomputation(InputFile = PreProcessedData[0])
     #Vectors = computeSkeleton().vectorCompute(Inputs = Class.returnPreprocessed())
 
 
