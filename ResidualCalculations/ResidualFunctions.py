@@ -5,7 +5,7 @@ Created on Fri Nov 19 20:22:00 2021
 @author: Luca Hategan
 """
 import numpy as np
-import math 
+import math
 import pandas as pd
 import time
 from scipy.fft import fft, ifft, dct, idct
@@ -30,38 +30,61 @@ def renameCols(InputFileList, BodyParts):
 
 def circlingBehaviour(MidLabelVectors):
     Condition = True
-    Angle = 0
-    Rotations = 0
+    #Use hashmap for This
+    RotationalHashMap = {"Angle":0, "CCWAngle":0, "CW":0, "CCW":0, "PartialCW":0, "PartialCCW":0}
     AngleVector = []
     thetaVectors = []
+    CCWAngleVector = []
     for Vec1, Vec2 in zip(MidLabelVectors[:-1], MidLabelVectors[1:]):
         try:
             theta = math.degrees(math.acos((np.dot(Vec1, Vec2))/((np.linalg.norm(Vec1))*(np.linalg.norm(Vec2)))))
             thetaVectors.append(theta)
         except ValueError:
             pass
-        if Angle < 360:
-            if (((Vec2[0] - Vec1[0]) > 0) and (Vec2[1] - Vec1[1] < 0)) 
-                or (((Vec2[0] - Vec1[0]) < 0) and (Vec2[1] - Vec1[1] < 0))
-                or (((Vec2[0] - Vec1[0]) < 0) and (Vec2[1] - Vec1[1] < 0))
-                Angle += theta
-                AngleVector.append(Angle)
-        elif Angle >= 358:
-            Angle = 0
-            Rotations += 1
+        if RotationalHashMap["Angle"] < 358 or RotationalHashMap["CCWAngle"] < 358:
+            #Clockwise motion only
+            if (((Vec2[1] - Vec1[1] < 0)) or ((Vec2[1] - Vec1[1]) > 0)):
+                RotationalHashMap["Angle"] += theta
+                RotationalHashMap["PartialCW"] += (theta/360)
+                AngleVector.append(RotationalHashMap["Angle"])
+            #Counterclockwise motion only
+            else:
+                RotationalHashMap["CCWAngle"] += theta
+                RotationalHashMap["PartialCCW"] += (theta/360)
+                CCWAngleVector.append(RotationalHashMap["CCWAngle"])
+
+        elif RotationalHashMap["Angle"] >= 358 or RotationalHashMap["CCWAngle"] >= 358:
+            if RotationalHashMap["Angle"] >= 358:
+                RotationalHashMap["Angle"] = 0
+                RotationalHashMap["PartialCW"] = 0
+                RotationalHashMap["CW"] += 1
+
+            elif RotationalHashMap["CCWAngle"] >= 358:
+                RotationalHashMap["CCWAngle"] = 0
+                RotationalHashMap["PartialCCW"] = 0
+                RotationalHashMap["CCW"] += 1
+
+
+    print(RotationalHashMap)
     mp.plot(np.array(AngleVector[26500:28000]))
     mp.xlabel("Frame Index")
     mp.ylabel("Angle-theta, Degrees")
     mp.title("Consecutive frame Midpoint-Head vector angles")
     mp.show()
-    FFT = fft(np.array(AngleVector[27000:28000]))
+    mp.plot(np.array(CCWAngleVector))
+    mp.xlabel("Frame Index")
+    mp.ylabel("Angle-theta, Degrees")
+    mp.title("Consecutive frame Midpoint-Head vector angles")
+    mp.show()
+
+    FFT = fft(np.array(AngleVector[26500:28000]))
     mp.plot(FFT)
     mp.xlabel("Frame Index")
     mp.ylabel("fourier-transformed, frequency")
     mp.title("fourier-transform of cicling data")
     mp.show()
-    print(Rotations)
-        
+
+
 def circlingBehaviour2(MidPoints, MidLabelVectors, MaxY):
     MaxYVectors_Fxn = lambda midpoints, maxY: [[0, maxY - Vectors[1]] for Vectors in midpoints]
     MinYVectors_Fxn = lambda midpoints, minY: [[0, minY - Vectors[1]] for Vectors in midpoints]
@@ -87,19 +110,3 @@ def circlingBehaviour2(MidPoints, MidLabelVectors, MaxY):
     mp.plot(np.array(AngleVector[0:1000]))
     mp.show()
     print(Rotations)
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    

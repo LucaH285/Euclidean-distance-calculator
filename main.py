@@ -66,7 +66,7 @@ class loadPreprocess(object):
         Len = len(PreProcessedFrames[0][0])
         XVal = list(pd.to_numeric(PreProcessedFrames[0][0].loc[Len-10000:Len, 4], downcast="float"))
         YVal = [i for i in range(len(XVal))]#list(pd.to_numeric(PreProcessedFrames[0][0].loc[20000:29000, 2], downcast = "float"))
-        GraphFunctions.genericGraph(YVal, XVal, Xlab="Time (arbitrary)", Ylab="X-position of Head", Title="Time vs. Position")
+        #GraphFunctions.genericGraph(YVal, XVal, Xlab="Time (arbitrary)", Ylab="X-position of Head", Title="Time vs. Position")
         BodyParts = self.checkBodyPartList()
         return(PreProcessedFrames, BodyParts)
 
@@ -352,7 +352,6 @@ class circlingBehavior(residualComputations):
         self.LabelsToTrack_To = ToLabel
         self.AllLabels = AllLabels
 
-
     def residualcomputation(self, InputFileList):
         if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
             FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
@@ -366,17 +365,17 @@ class circlingBehavior(residualComputations):
                     Coords_To = PositionVectorFunction(Frames[self.LabelsToTrack_To+"_x"], Frames[self.LabelsToTrack_To+"_y"])
                     Midpoints = Midpoint(Coords_From, Coords_To)
                     Vectors = MidpointLabelVector(Midpoints, Coords_From)
-                    
+
 
                     # RF.circlingBehaviour2(MidPoints=Midpoints, MidLabelVectors=Vectors, MaxY=1080)
                     # breakpoint()
-                    
+
                     RF.circlingBehaviour(Vectors)
                     breakpoint()
-                    
+
                     Angles = Theta(Vectors)
                     # print(Midpoints[0:10])
-                    # print(Vectors[0:10])
+                    # print(Vectors[0:10])``
                     mp.plot(range(len(Vectors[9200:9500])), [V[0] for V in Vectors[9200:9500]])
                     mp.show()
                     Rotations = np.nansum(Angles)/360
@@ -437,7 +436,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"D:\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=["/Volumes/ESD-USB/PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = ""
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
     PreProcessedData = Class.__call__()
