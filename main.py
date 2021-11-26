@@ -356,21 +356,33 @@ class circlingBehavior(residualComputations):
         if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
             FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
             PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
+            
             Midpoint = lambda PosVec1, PosVec2: [[(1/2)*(i + j) for i, j in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(PosVec1, PosVec2)]
             MidpointLabelVector = lambda Midpoint, Coordinate: [[(V2 - V1) for V1, V2 in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(Midpoint, Coordinate)]
+            
             Theta = lambda Vectors: [math.degrees(np.arccos((np.dot(Vec1, Vec2))/(np.linalg.norm(Vec1)*np.linalg.norm(Vec2)))) for Vec1, Vec2 in zip(Vectors[:-1], Vectors[1:])]
             for Ind, Files in enumerate(FileList):
                 for Frames in Files:
                     Coords_From = PositionVectorFunction(Frames[self.LabelsToTrack_From+"_x"], Frames[self.LabelsToTrack_From+"_y"])
                     Coords_To = PositionVectorFunction(Frames[self.LabelsToTrack_To+"_x"], Frames[self.LabelsToTrack_To+"_y"])
                     Midpoints = Midpoint(Coords_From, Coords_To)
-                    Vectors = MidpointLabelVector(Midpoints, Coords_From)
+                    
+                    
+                    # for i in range(len(Coords_From)):
+                    #     fig, ax = mp.subplots()
+                    #     ax.scatter([Coords_From[i][0], Midpoints[i][0], Coords_To[i][0]], [Coords_From[i][1], Midpoints[i][1], Coords_To[i][1]])
+                    #     ax.text(Coords_To[i][0], Coords_To[i][1], "Head")
+                    #     ax.set_xlim([0, 1920])
+                    #     ax.set_ylim([0, 1080])
+                    #     mp.show()
+                    # breakpoint()
+                    Vectors = MidpointLabelVector(Midpoints, Coords_To)
 
 
                     # RF.circlingBehaviour2(MidPoints=Midpoints, MidLabelVectors=Vectors, MaxY=1080)
                     # breakpoint()
 
-                    RF.circlingBehaviour(Vectors)
+                    print(RF.circlingBehaviour(Vectors, CriticalAngle=358))
                     breakpoint()
 
                     Angles = Theta(Vectors)
@@ -436,7 +448,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=["/Volumes/ESD-USB/PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = ""
     Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
     PreProcessedData = Class.__call__()
