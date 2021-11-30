@@ -367,6 +367,11 @@ class circlingBehavior(residualComputations):
                     Coords_To = PositionVectorFunction(Frames[self.LabelsToTrack_To+"_x"], Frames[self.LabelsToTrack_To+"_y"])
                     Midpoints = Midpoint(Coords_From, Coords_To)
                     
+                    # Vectors2 = []
+                    # for Ind in (range(len(Midpoints) - 1)):
+                    #     V1 = [(V2 - V1) for V1, V2 in zip(Midpoints[Ind], Coords_To[Ind])]
+                    #     V2 = [(V2 - V1) for V1, V2 in zip(Midpoints[Ind], Coords_To[Ind + 1])]
+                    #     Vectors2.append((V1, V2))
                     
                     # for i in range(len(Coords_From)):
                     #     fig, ax = mp.subplots()
@@ -377,12 +382,14 @@ class circlingBehavior(residualComputations):
                     #     mp.show()
                     # breakpoint()
                     Vectors = MidpointLabelVector(Midpoints, Coords_To)
+                    RF.circlingBehaviour3(Midpoints=Midpoints, VectorList=Vectors, MaxY=1080, MaxX=1920, CriticalAngle=358)
+                    breakpoint()
 
 
                     # RF.circlingBehaviour2(MidPoints=Midpoints, MidLabelVectors=Vectors, MaxY=1080)
                     # breakpoint()
 
-                    print(RF.circlingBehaviour(Vectors, CriticalAngle=358))
+                    RF.circlingBehaviour(Vectors, CriticalAngle=358)
                     breakpoint()
 
                     Angles = Theta(Vectors)
