@@ -11,6 +11,7 @@ import time
 from scipy.fft import fft, ifft, dct, idct
 import matplotlib.pyplot as mp
 import numpy.fft as npfft
+import cv2
 
 def renameCols(InputFileList, BodyParts):
     ColsToUse = [Str for StrInit in BodyParts for Str in [StrInit]*2]
@@ -28,199 +29,150 @@ def renameCols(InputFileList, BodyParts):
             Reset2ColNames[Ind].append(Frames)
     return(Reset2ColNames)
 
-def aggregateCircling(Midpoints, VectorList, MaxY, MaxX):
-    RotationalHashMap = {"Angle":0, "CWAngle":0, "CCWAngle":0, "CW":0, "CCW":0, "Total":0, "PartialCW":0, "PartialCCW":0}
-    AngleVector = []
-    for Vec1, Vec2 in zip(VectorList[:-1], VectorList[1:]):
-        if Vec1 != Vec2:
-            theta = math.degrees(math.acos((np.dot(Vec1, Vec2))/((np.linalg.norm(Vec1))*(np.linalg.norm(Vec2)))))
-        else:
-            theta = 0.0 
-        # ClockwiseRotationMatrix = [[np.cos(theta), np.sin(theta)], 
-        #                            [-1*np.sin(theta), np.cos(theta)]]    
-        # CounterClockwiseRotationMatrix = [[np.cos(theta), -1*np.sin(theta)], 
-        #                                   [np.sin(theta), np.cos(theta)]] 
-        #print(np.cross(np.dot(np.array(ClockwiseRotationMatrix), Vec1), Vec2))
-        # time.sleep(0.1)
-        if RotationalHashMap["Angle"] < 358:
-            RotationalHashMap["Angle"] += theta
-            RotationalHashMap["PartialCW"] += theta/360
-            AngleVector.append(RotationalHashMap["Angle"])
-        elif RotationalHashMap["Angle"] >= 358:
-            RotationalHashMap["Angle"] = 0
-            RotationalHashMap["PartialCW"] = 0
-            RotationalHashMap["Total"] += 1
-            
-    print(RotationalHashMap)
-    
-    mp.plot(np.array(AngleVector[10000:12000]))
-    mp.xlabel("Frame Index")
-    mp.ylabel("Angle-theta, Degrees")
-    mp.title("Consecutive frame Midpoint-Head vector angles")
-    mp.show()
-    breakpoint()
-
-
-
-def circlingBehaviour(VectorList, CriticalAngle):
-    RotationalHashMap = {"Angle":0, "CCWAngle":0, "CW":0, "CCW":0, "PartialCW":0, "PartialCCW":0}
-    AngleVector = []
-    CCWAngleVector = []
-    for Vec1, Vec2 in zip(VectorList[:-1], VectorList[1:]):
-        if Vec1 != Vec2:
-            theta = math.degrees(math.acos((np.dot(Vec1, Vec2))/((np.linalg.norm(Vec1))*(np.linalg.norm(Vec2)))))
-        else:
-            theta = 0.0
-        #Lagrange Identity for CW/CCW
-        Lagrange = np.linalg.norm(Vec1)*np.linalg.norm(Vec2)*np.sin(theta)
-        #CrossProduct for CW/CCW
-        CrossProduct = np.cross(Vec1, Vec2)
-        if (CrossProduct >= 0):
-            RotationalHashMap["Angle"] += theta
-            AngleVector.append(RotationalHashMap["Angle"])
-            CCWAngleVector.append(0)
-            if RotationalHashMap["Angle"] >= CriticalAngle:
-                RotationalHashMap["Angle"] = 0
-                RotationalHashMap["CW"] += 1
-        else:
-            RotationalHashMap["CCWAngle"] += theta
-            CCWAngleVector.append(RotationalHashMap["CCWAngle"])
-            AngleVector.append(RotationalHashMap["Angle"])
-            if RotationalHashMap["CCWAngle"] >= CriticalAngle:
-                RotationalHashMap["CCWAngle"] = 0
-                RotationalHashMap["CCW"] += 1
-    return(RotationalHashMap, AngleVector, CCWAngleVector)
-
-
-def circlingBehavior2(VectorList, CriticalAngle):
-    RotationalHashMap = {"Angle":0, "CCWAngle":0, "CW":0, "CCW":0, "PartialCW":0, "PartialCCW":0}
-    AngleVector = []
-    CCWAngleVector = []
-    for Vectors in VectorList:
-        if Vectors[0] != Vectors[1]:
-            theta = math.degrees(math.acos((np.dot(Vectors[0], Vectors[1]))/((np.linalg.norm(Vectors[0]))*(np.linalg.norm(Vectors[1])))))
-        else:
-            theta = 0.0
-        #Lagrange Identity for CW/CCW
-        Lagrange = np.linalg.norm(Vectors[0])*np.linalg.norm(Vectors[1])*np.sin(theta)
-        #CrossProduct for CW/CCW
-        CrossProduct = np.cross(Vectors[0], Vectors[1])
-        if (CrossProduct >= 0):
-            RotationalHashMap["Angle"] += theta
-            AngleVector.append(RotationalHashMap["Angle"])
-            CCWAngleVector.append(RotationalHashMap["CCWAngle"])
-            if RotationalHashMap["Angle"] >= CriticalAngle:
-                RotationalHashMap["Angle"] = 0
-                RotationalHashMap["CW"] += 1
-        else:
-            RotationalHashMap["CCWAngle"] += theta
-            CCWAngleVector.append(RotationalHashMap["CCWAngle"])
-            AngleVector.append(RotationalHashMap["Angle"])
-            if RotationalHashMap["CCWAngle"] >= CriticalAngle:
-                RotationalHashMap["CCWAngle"] = 0
-                RotationalHashMap["CCW"] += 1
-    print(RotationalHashMap)
-    
-    mp.plot(np.array(AngleVector[10000:12000]))
-    mp.xlabel("Frame Index")
-    mp.ylabel("Angle-theta, Degrees")
-    mp.title("Consecutive frame Midpoint-Head vector angles")
-    mp.show()
-
-    mp.plot(np.array(CCWAngleVector[27000:28000]))
-    mp.xlabel("Frame Index")
-    mp.ylabel("Angle-theta, Degrees")
-    mp.title("Consecutive frame Midpoint-Head vector angles")
-    mp.show()
-
-    breakpoint()
-    FFT = fft(np.array(np.cos(AngleVector[26500:28000])))
-    mp.plot(FFT)
-    mp.xlabel("Frame Index")
-    mp.ylabel("fourier-transformed, frequency")
-    mp.title("fourier-transform of cicling data")
-    mp.show()
+# def matrixSkeleton(Labels_To = [], Label_From = "", InputFileList):
     
     
-    return(RotationalHashMap, AngleVector, CCWAngleVector)
-
-def circlingBehaviour3(Midpoints, VectorList, MaxY, MaxX, CriticalAngle):
-    VectorFunction_YVal = lambda midpoints, Val: [[0, Val - Vectors[1]] for Vectors in midpoints]
-    VectorFunction_XVal = lambda midpoints, Val: [[Val - Vectors[0], 0] for Vectors in midpoints]
-    MaxYVectors = VectorFunction_YVal(midpoints=Midpoints, Val=MaxY)
-    MinYVectors = VectorFunction_YVal(midpoints=Midpoints, Val=0)
-    MaxXVectors = VectorFunction_XVal(midpoints=Midpoints, Val=MaxX)
-    MinXVectors = VectorFunction_XVal(midpoints=Midpoints, Val=0)
-    RotationalHashMap = {"Angle":0, "CCWAngle":0, "CW":0, "CCW":0, "PartialCW":0, "PartialCCW":0}
     
+
+def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
+    DirectionVectorsFxn = lambda PositionVec1, PositionVec2: [[V2 - V1  for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PositionVec1, PositionVec2)]
+    MaxVectorFunction = lambda StartPosition, EndPosition: [[EndVecs[0] - StartVecs[0], EndVecs[1] - StartVecs[1]] for StartVecs, EndVecs in zip(StartPosition, EndPosition)]
+    DirectionVectors = DirectionVectorsFxn(PositionVecX, PositionVecY)
+    RotationalHashMap = {"CWAngle":0, "CCWAngle":0, "CW":0, "CCW":0.000, "PartialCW":0, "PartialCCW":0}
+    
+    plotMaxVec_YMax = [[DVectors[0], 0]for DVectors in PositionVecX]
+    plotMaxVec_YMin = [[DVectors[0], MaxY]for DVectors in PositionVecX]
+    plotMaxVec_XMax = [[MaxX, DVectors[1]]for DVectors in PositionVecX]
+    plotMaxVec_XMin = [[0, DVectors[1]]for DVectors in PositionVecX]
+    MaxVectors = MaxVectorFunction(PositionVecX, plotMaxVec_YMax)
+
     AngleList = []
-    for Vectors, MaxVec in zip(VectorList, MaxYVectors):
-        Cross = np.cross(MaxVec, Vectors)
-        theta = math.degrees(math.acos((np.dot(Vectors, MaxVec))/((np.linalg.norm(Vectors))*(np.linalg.norm(MaxVec)))))
-        if Cross >= 0:
-            AngleList.append(360 - theta)
+    RotationalMotionCW = []
+    RotationalMotionCCW = []
+    for V1, V2 in zip(MaxVectors, DirectionVectors):
+        #Overcome the cross product by crossing the body-head vectors with the maximum vector
+        Cross = np.cross(V1, V2)
+        Theta = math.degrees(math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1)))))
+        if Cross > 0:
+            AngleList.append(Theta)
         elif Cross < 0:
-            AngleList.append(theta)
-    IndexOfRotation = []
-    for Angles in AngleList:
-        if Angles >= CriticalAngle:
-            RotationalHashMap["CW"] += 1
-            IndexOfRotation.append(AngleList.index(Angles))
- 
-    for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
-        if ((Theta1 > Theta2)):
-            RotationalHashMap["CCWAngle"] += (Theta1 - Theta2)
-            if RotationalHashMap["CCWAngle"] >= CriticalAngle:
-                RotationalHashMap["CCWAngle"] = 0
+            Phi = 360 - Theta
+            AngleList.append(Phi)
+                
+    # Compute the CW and CCW rotations, respectively
+    AngleIndex = 0
+    FrameCount = 0
+    Condition = True
+    while(Condition):       
+        for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
+            if ((Theta1/CriticalAngle >= CriticalAngle/360) 
+                and (Theta2/CriticalAngle < 0.25)
+                #This argument controls 
+                and ((AngleList.index(Theta1) - AngleIndex) > 30)):
+                RotationalHashMap["CW"] += 1
+                print(RotationalHashMap["CW"])
+                if RotationalHashMap["CW"] - math.modf(RotationalMotionCW[-1])[1] < 2:
+                    RotationalMotionCW.append(RotationalHashMap["CW"])
+                AngleIndex = AngleList.index(Theta1)
+                #print(Theta1, Theta2, AngleList.index(Theta1))
+            else:
+                RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle) 
+                
+            if ((Theta2/CriticalAngle < Theta1/CriticalAngle) and ((Theta1 - Theta2) < CriticalAngle)
+                  and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
+                CCWRotation = (Theta1 - Theta2)/CriticalAngle
+                RotationalHashMap["CCWAngle"] += CCWRotation
+                if RotationalHashMap["CCWAngle"] >= CriticalAngle/360:
+                    RotationalHashMap["CCW"] += 1
+                    RotationalHashMap["CCWAngle"] = 0
+                    FrameCount = 0
+                RotationalMotionCCW.append(RotationalHashMap["CCW"] + RotationalHashMap["CCWAngle"])
+                FrameCount += 1
+            else:
+                if FrameCount < 5:
+                    RotationalHashMap["CCWAngle"] = 0.000
+                    FrameCount = 0
+                RotationalMotionCCW.append(RotationalHashMap["CCW"] + RotationalHashMap["CCWAngle"])
+                FrameCount -= 1
+      
+        RoundLastCW = math.modf(RotationalMotionCW[-1])[0]
+        RoundLastCCW = math.modf(RotationalMotionCCW[-1])[0]
+        if ((RoundLastCW > 0.9) or (RoundLastCCW > 0.9)):
+            if RoundLastCW > 0.9:
+                RotationalHashMap["CW"] += 1
+                RotationalMotionCW.append(RotationalHashMap["CW"])
+                Condition = False
+            elif RoundLastCCW > 0.9:
                 RotationalHashMap["CCW"] += 1
+                RotationalMotionCCW.append(RotationalHashMap["CCW"])
+                Condition = False
         else:
-            RotationalHashMap["CCWAngle"] = 0
-         
-    print(RotationalHashMap)
-    Angles = [np.sin(math.radians(i)) for i in AngleList[0:5000]]
-    Direction_X = [i[0] for i in VectorList[0:5000]]
-    Direction_Y = [i[0] for i in VectorList[0:5000]]
-    NormalizedDirection_X = [((2*((j-min(Direction_X))/(max(Direction_X) - min(Direction_X)))) - 1) for j in Direction_X]
-    NormalizedDirection_Y = [((2*((j-min(Direction_Y))/(max(Direction_Y) - min(Direction_Y)))) - 1) for j in Direction_Y]
-    mp.plot(Angles)
-    mp.plot(NormalizedDirection_X, color="red")
-    mp.plot(NormalizedDirection_Y, color = "black")
-    mp.xlabel("Frame Index")
-    mp.ylabel("Angle-theta, sin(radians)")
-    mp.title("Consecutive frame Midpoint-Head vector & North-vector angles")
-    mp.show()
-    
-    coslist = [np.sin(math.radians(1440 - i)) for i in range(0, 1440)]
-    mp.plot(coslist)
-    mp.show()
-
-    mp.plot(np.abs(npfft.rfft(Angles)[0:100]))
-    mp.show()
-    breakpoint() 
+            Condition = False
         
+    print(RotationalHashMap)
+    breakpoint()
+    return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
+           plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 
-    # mp.plot([i[0] for i in VectorList[27000:28000]], [j[1] for j in VectorList[27000:28000]])
-    # mp.show()
+def rotationQuantifier2(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
+    MidpointOfLine_Fxn = lambda PosVec1, PosVec2:[[(V1 + V2)/2 for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PosVec1, PosVec2)]
+    MidPointToLabel_Fxn = lambda Midpoints, PosVec: [[V2 - V1 for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(Midpoints, PosVec)]
+   # MaxVectorFunction = lambda 
+    MidPointOfLine = MidpointOfLine_Fxn(PositionVecX, PositionVecY)
+    MidPointToLabel_Vector = MidPointToLabel_Fxn(MidPointOfLine, PositionVecY)
+   # MaxVector = 
 
-    # print(RotationalHashMap)
-    # mp.plot(np.array(AngleVector[27000:28000]))
-    # mp.xlabel("Frame Index")
-    # mp.ylabel("Angle-theta, Degrees")
-    # mp.title("Consecutive frame Midpoint-Head vector angles")
-    # mp.show()
+    pass
 
-    # mp.plot(np.array(CCWAngleVector))
-    # mp.xlabel("Frame Index")
-    # mp.ylabel("Angle-theta, Degrees")
-    # mp.title("Consecutive frame Midpoint-Head vector angles")
-    # mp.show()
-
-    # breakpoint()
-    # FFT = fft(np.array(np.cos(AngleVector[26500:28000])))
-    # mp.plot(FFT)
-    # mp.xlabel("Frame Index")
-    # mp.ylabel("fourier-transformed, frequency")
-    # mp.title("fourier-transform of cicling data")
-    # mp.show()
+def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, VideoOut):
+    cap = cv2.VideoCapture(videoFile)
+    # current_state = False
+    # annotation_list = Annotations
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(VideoOut, fourcc, 30.0, (1920, 1080))
+    
+    def __draw_label(img, text, pos, bg_color):
+        font_face = cv2.FONT_HERSHEY_SIMPLEX
+        scale = 2
+        color = (0, 0, 0)
+        thickness = cv2.FILLED
+        margin = 5
+    
+        txt_size = cv2.getTextSize(str(text), font_face, scale, thickness)
+    
+        end_x = pos[0] + txt_size[0][0] + margin
+        end_y = pos[1] - txt_size[0][1] - margin
+    
+        cv2.rectangle(img, pos, (end_x, end_y), bg_color, thickness)
+        cv2.putText(img, str(text), pos, font_face, scale, color, 1, cv2.LINE_AA)
+        
+    i = 0
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        if ret == True:
+            try:
+                __draw_label(frame, f"CW: {round(Annotations[0][i], 3)}", (20, 200), (255,255,255))
+                cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), (0, 255, 0), 5, 8, 0)
+                __draw_label(frame, f"CCW: {round(Annotations[1][i], 3)}", (20, 250), (0,0,255))
+                cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[3][i][0]), int(Annotations[3][i][1])), (0, 0, 255), 5, 8, 0)
+                cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[4][i][0]), int(Annotations[4][i][1])), (255, 0, 0), 5, 8, 0)
+                cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[5][i][0]), int(Annotations[5][i][1])), (50, 100, 150), 5, 8, 0)
+                cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[6][i][0]), int(Annotations[6][i][1])), (150, 100, 50), 5, 8, 0)
+            except IndexError:
+                pass
+            out.write(frame)
+            cv2.imshow("Frame", frame)
+            i += 1 
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            elif cv2.waitKey(1) & 0xFF == ord('p'):
+                time.sleep(3)
+                
+        else:
+            break
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    
 
 

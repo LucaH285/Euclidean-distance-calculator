@@ -347,59 +347,42 @@ class computeAngularVelocity(residualComputations):
             raise(KeyError("Label of interest is not a label that has been tracked by DLC!"))
 
 class circlingBehavior(residualComputations):
-    def __init__(self, FromLabel, ToLabel, AllLabels):
+    def __init__(self, FromLabel, ToLabel, AllLabels, VideoIn, VideoOut, ScreenRes):
         self.LabelsToTrack_From = FromLabel
         self.LabelsToTrack_To = ToLabel
         self.AllLabels = AllLabels
+        self.VideoInput = VideoIn
+        self.VideoOutput = VideoOut
+        self.Resolution = ScreenRes
+        
+    def vectorSkeleton(Labels_To, Labels_From, Adjusted_InputFileList):
+        
+        
+        pass
 
     def residualcomputation(self, InputFileList):
         if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
             FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
-            PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
             
+            PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
             Midpoint = lambda PosVec1, PosVec2: [[(1/2)*(i + j) for i, j in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(PosVec1, PosVec2)]
             MidpointLabelVector = lambda Midpoint, Coordinate: [[(V2 - V1) for V1, V2 in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(Midpoint, Coordinate)]
             
-            Theta = lambda Vectors: [math.degrees(np.arccos((np.dot(Vec1, Vec2))/(np.linalg.norm(Vec1)*np.linalg.norm(Vec2)))) for Vec1, Vec2 in zip(Vectors[:-1], Vectors[1:])]
             for Ind, Files in enumerate(FileList):
                 for Frames in Files:
                     Coords_From = PositionVectorFunction(Frames[self.LabelsToTrack_From+"_x"], Frames[self.LabelsToTrack_From+"_y"])
                     Coords_To = PositionVectorFunction(Frames[self.LabelsToTrack_To+"_x"], Frames[self.LabelsToTrack_To+"_y"])
-                    Midpoints = Midpoint(Coords_From, Coords_To)
+                    Midpoints = Midpoint(Coords_To, Coords_From)
                     
-                    # Vectors2 = []
-                    # for Ind in (range(len(Midpoints) - 1)):
-                    #     V1 = [(V2 - V1) for V1, V2 in zip(Midpoints[Ind], Coords_To[Ind])]
-                    #     V2 = [(V2 - V1) for V1, V2 in zip(Midpoints[Ind], Coords_To[Ind + 1])]
-                    #     Vectors2.append((V1, V2))
-                    
-                    # for i in range(len(Coords_From)):
-                    #     fig, ax = mp.subplots()
-                    #     ax.scatter([Coords_From[i][0], Midpoints[i][0], Coords_To[i][0]], [Coords_From[i][1], Midpoints[i][1], Coords_To[i][1]])
-                    #     ax.text(Coords_To[i][0], Coords_To[i][1], "Head")
-                    #     ax.set_xlim([0, 1920])
-                    #     ax.set_ylim([0, 1080])
-                    #     mp.show()
-                    # breakpoint()
+                    #MaxY=1080,
                     Vectors = MidpointLabelVector(Midpoints, Coords_To)
-                    RF.circlingBehaviour3(Midpoints=Midpoints, VectorList=Vectors, MaxY=1080, MaxX=1920, CriticalAngle=358)
+                    Quantifier = RF.rotationQuantifier(PositionVecX=Coords_From, PositionVecY=Coords_To, MaxY=self.Resolution[1], 
+                                                       MaxX=self.Resolution[0], CriticalAngle=350)
+                    
+                    RF.TrackOnVideo(Annotations=Quantifier, videoFile=self.VideoInput,
+                                    PositionVectorsX=Coords_From, PositionVectorsY=Coords_To, VideoOut = self.VideoOutput)
                     breakpoint()
 
-
-                    # RF.circlingBehaviour2(MidPoints=Midpoints, MidLabelVectors=Vectors, MaxY=1080)
-                    # breakpoint()
-
-                    RF.circlingBehaviour(Vectors, CriticalAngle=358)
-                    breakpoint()
-
-                    Angles = Theta(Vectors)
-                    # print(Midpoints[0:10])
-                    # print(Vectors[0:10])``
-                    mp.plot(range(len(Vectors[9200:9500])), [V[0] for V in Vectors[9200:9500]])
-                    mp.show()
-                    Rotations = np.nansum(Angles)/360
-                    print(Rotations)
-                    breakpoint()
         else:
             raise(KeyError("Label(s) of interest not tracked by DLC"))
 
@@ -456,8 +439,8 @@ class linePlot_Generic(graphGeneric):
 
 if __name__=="__main__":
     FilePath=[r"F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
-    OutPath = ""
-    Class = loadPreprocess(FilePath, PValCutoff = 0.95, FPS=4)
+    OutPath = "",
+    Class = loadPreprocess(FilePath, PValCutoff = 0.6, FPS=4)
     PreProcessedData = Class.__call__()
 
     #EuclideanDistances = computeEuclideanDistance(BodyPartList = PreProcessedData[1][0]).compute(InputFileList=PreProcessedData[0])
@@ -481,5 +464,17 @@ if __name__=="__main__":
     #Vectors = computeSkeleton().vectorCompute(Inputs = Class.returnPreprocessed())
 
 
-    circling = circlingBehavior(FromLabel="Body", ToLabel="Head", AllLabels=PreProcessedData[1][0]).residualcomputation(InputFileList=PreProcessedData[0])
+    circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
+                                VideoIn = r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+                                VideoOut = r"", AllLabels=PreProcessedData[1][0]).residualcomputation(InputFileList=PreProcessedData[0])
+    
+                                                                                                      
+    
+                                                                                                      
+    
+                                                                                                      
+    
+                                                                                                      
+    
+                                                                                                      
     #linePlot().sendToGraph(InputFile = computeSums, GenotypeIdentifier = ["WT", "KO"], SexIdentifier = ["Male", "Male"], BodyPart = "Body")
