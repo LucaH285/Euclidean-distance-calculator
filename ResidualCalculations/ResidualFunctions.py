@@ -31,6 +31,52 @@ def renameCols(InputFileList, BodyParts):
 
 # def matrixSkeleton(Labels_To = [], Label_From = "", InputFileList):
     
+def roationQuantifier_(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
+    DirectionVectorsFxn = lambda PositionVec1, PositionVec2: [[V2 - V1  for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PositionVec1, PositionVec2)]
+    MaxVectorFunction = lambda StartPosition, EndPosition: [[EndVecs[0] - StartVecs[0], EndVecs[1] - StartVecs[1]] for StartVecs, EndVecs in zip(StartPosition, EndPosition)]
+    DirectionVectors = DirectionVectorsFxn(PositionVecX, PositionVecY)
+    RotationalHashMap = {"CWAngle":0, "CCWAngle":0, "CW":0, "CCW":0.000, "PartialCW":0, "PartialCCW":0}
+    
+    plotMaxVec_YMax = [[DVectors[0], 0]for DVectors in PositionVecX]
+    plotMaxVec_YMin = [[DVectors[0], MaxY]for DVectors in PositionVecX]
+    plotMaxVec_XMax = [[MaxX, DVectors[1]]for DVectors in PositionVecX]
+    plotMaxVec_XMin = [[0, DVectors[1]]for DVectors in PositionVecX]
+    MaxVectors = MaxVectorFunction(PositionVecX, plotMaxVec_YMax)
+
+    AngleList = []
+    RotationalMotionCW = []
+    RotationalMotionCCW = []
+    for V1, V2 in zip(MaxVectors, DirectionVectors):
+        #Overcome the cross product by crossing the body-head vectors with the maximum vector
+        Cross = np.cross(V1, V2)
+        Theta = math.degrees(math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1)))))
+        if Cross > 0:
+            AngleList.append(Theta)
+        elif Cross < 0:
+            Phi = 360 - Theta
+            AngleList.append(Phi)
+            
+    InitialCondition = True
+    ReferenceAngle = 0
+    # for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
+    #     if ((Theta1 == Theta2) and (InitialCondition == True)):
+    #         pass
+    #     elif ((Theta1 != Theta2) and (InitialCondition == True)):
+    #         InitialCondition == False
+    #         ReferenceAngle = Theta1/CriticalAngle
+    #     else:
+    #         if ((Theta1/CriticalAngle >= ReferenceAngle) and (Theta2/CriticalAngle < CriticalAngle/360)
+    #             and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0):
+                
+                
+            
+                
+        
+
+          
+    return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
+           plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
+    
     
 
 def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
@@ -62,17 +108,27 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
     AngleIndex = 0
     FrameCount = 0
     Condition = True
-    while(Condition):       
+    while(Condition):
+        TemporaryAngleList = []
         for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
+            """
+            Another way is to check if a full revolution has occured before counting
+            a full cw/ccw rotation.
+            """
             if ((Theta1/CriticalAngle >= CriticalAngle/360) 
-                and (Theta2/CriticalAngle < 0.25)
-                #This argument controls 
+                and (Theta2/CriticalAngle < 0.25) and (np.sum(TemporaryAngleList) >= CriticalAngle)
+                #This argument controls the frame indecces to make sure that Frames are sufficiently 
+                #distanced from each other so as to avoid counting counterclocwise then clockwise motion
+                #that passes the critical angle (happens sometimes)
                 and ((AngleList.index(Theta1) - AngleIndex) > 30)):
                 RotationalHashMap["CW"] += 1
                 if ((RotationalHashMap["CW"] - math.modf(RotationalMotionCW[-1])[1]) < 2):
                     RotationalMotionCW.append(RotationalHashMap["CW"])
                 AngleIndex = AngleList.index(Theta1)
+                TemporaryAngleList.clear()
             else:
+                if ((Theta2 - Theta1) > 0):
+                    TemporaryAngleList.append((Theta2 - Theta1))
                 RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle) 
                 
             if ((Theta2/CriticalAngle < Theta1/CriticalAngle) and ((Theta1 - Theta2) < CriticalAngle)
@@ -105,7 +161,8 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 Condition = False
         else:
             Condition = False
-        
+    
+    print(RotationalHashMap)
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 

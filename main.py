@@ -359,6 +359,7 @@ class circlingBehavior(residualComputations):
     def vectorSkeleton(self, Labels_ToList, Labels_From, Adjusted_InputFileList):
         Vectors = lambda StartLabel_AsList, Labels_AsList: [[V2 - V1 for V1, V2 in zip(StartVec, EndVec)] for StartVec, EndVec in zip(StartLabel_AsList, Labels_AsList)]
         NormVectors = lambda VectorList: [np.sqrt(np.sum([Vals**2 for Vals in vectors])) for vectors in VectorList]
+        VectorAngles = lambda VectorList1, VectorList2: [math.degrees(math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1))))) for V1, V2 in zip(VectorList1, VectorList2)]
         PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
         LabelList = [Labels_From] + Labels_ToList
         VectorList = [
@@ -370,9 +371,12 @@ class circlingBehavior(residualComputations):
         ColDict = {VectorFrame.columns.values[Cols]:LabelList[Cols] for Cols in range(len(VectorFrame.columns.values))}
         VectorFrame_Renamed = VectorFrame.rename(ColDict, axis="columns")
         DirectionVectorList = [Vectors(VectorFrame_Renamed[Labels_From], VectorFrame_Renamed[LabelsTo]) for LabelsTo in Labels_ToList]
+        Norms = [NormVectors(Vec) for Vec in DirectionVectorList]
         
-        fxn = [NormVectors(Vec) for Vec in DirectionVectorList]
-        print(fxn)
+        Theta = []
+        for Vectors in DirectionVectorList:
+            for Vectors2 in DirectionVectorList[:-1]:
+                Theta.append()
         breakpoint()
         pass
 
@@ -380,7 +384,7 @@ class circlingBehavior(residualComputations):
         if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
             FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
 
-            self.vectorSkeleton(self.Labels_To+[self.LabelsToTrack_To], self.LabelsToTrack_From, Adjusted_InputFileList = FileList)
+            # self.vectorSkeleton(self.Labels_To+[self.LabelsToTrack_To], self.LabelsToTrack_From, Adjusted_InputFileList = FileList)
             
             PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
             Midpoint = lambda PosVec1, PosVec2: [[(1/2)*(i + j) for i, j in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(PosVec1, PosVec2)]
@@ -456,7 +460,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"D:\Programs\2Minute_Trim\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
     Class = loadPreprocess(FilePath, PValCutoff = 0.6, FPS=4)
     PreProcessedData = Class.__call__()
@@ -483,7 +487,7 @@ if __name__=="__main__":
 
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
-                                VideoIn = r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+                                VideoIn = r'D:\Programs\2Minute_Trim\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
                                 VideoOut = r"", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     
