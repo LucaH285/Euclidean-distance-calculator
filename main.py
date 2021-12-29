@@ -347,22 +347,40 @@ class computeAngularVelocity(residualComputations):
             raise(KeyError("Label of interest is not a label that has been tracked by DLC!"))
 
 class circlingBehavior(residualComputations):
-    def __init__(self, FromLabel, ToLabel, AllLabels, VideoIn, VideoOut, ScreenRes):
+    def __init__(self, FromLabel, ToLabel, AllLabels, VideoIn, VideoOut, ScreenRes, **kwargs):
         self.LabelsToTrack_From = FromLabel
         self.LabelsToTrack_To = ToLabel
         self.AllLabels = AllLabels
         self.VideoInput = VideoIn
         self.VideoOutput = VideoOut
         self.Resolution = ScreenRes
+        self.Labels_To = [kwargs[Labels] for Labels in kwargs]
         
-    def vectorSkeleton(Labels_To, Labels_From, Adjusted_InputFileList):
+    def vectorSkeleton(self, Labels_ToList, Labels_From, Adjusted_InputFileList):
+        Vectors = lambda StartLabel_AsList, Labels_AsList: [[V2 - V1 for V1, V2 in zip(StartVec, EndVec)] for StartVec, EndVec in zip(StartLabel_AsList, Labels_AsList)]
+        NormVectors = lambda VectorList: [np.sqrt(np.sum([Vals**2 for Vals in vectors])) for vectors in VectorList]
+        PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
+        LabelList = [Labels_From] + Labels_ToList
+        VectorList = [
+            PositionVectorFunction(CoordsX=Files[Ind][Labels+"_x"], CoordsY=Files[Ind][Labels+"_y"]) 
+            for Labels in LabelList
+            for Ind, Files in enumerate(Adjusted_InputFileList)
+            ]
+        VectorFrame = pd.DataFrame(VectorList).T
+        ColDict = {VectorFrame.columns.values[Cols]:LabelList[Cols] for Cols in range(len(VectorFrame.columns.values))}
+        VectorFrame_Renamed = VectorFrame.rename(ColDict, axis="columns")
+        DirectionVectorList = [Vectors(VectorFrame_Renamed[Labels_From], VectorFrame_Renamed[LabelsTo]) for LabelsTo in Labels_ToList]
         
-        
+        fxn = [NormVectors(Vec) for Vec in DirectionVectorList]
+        print(fxn)
+        breakpoint()
         pass
 
     def residualcomputation(self, InputFileList):
         if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
             FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
+
+            self.vectorSkeleton(self.Labels_To+[self.LabelsToTrack_To], self.LabelsToTrack_From, Adjusted_InputFileList = FileList)
             
             PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
             Midpoint = lambda PosVec1, PosVec2: [[(1/2)*(i + j) for i, j in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(PosVec1, PosVec2)]
@@ -466,7 +484,8 @@ if __name__=="__main__":
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
                                 VideoIn = r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
-                                VideoOut = r"", AllLabels=PreProcessedData[1][0]).residualcomputation(InputFileList=PreProcessedData[0])
+                                VideoOut = r"", AllLabels=PreProcessedData[1][0],
+                                Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     
                                                                                                       
     

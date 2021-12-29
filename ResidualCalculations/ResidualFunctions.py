@@ -32,7 +32,6 @@ def renameCols(InputFileList, BodyParts):
 # def matrixSkeleton(Labels_To = [], Label_From = "", InputFileList):
     
     
-    
 
 def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
     DirectionVectorsFxn = lambda PositionVec1, PositionVec2: [[V2 - V1  for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PositionVec1, PositionVec2)]
@@ -70,11 +69,9 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 #This argument controls 
                 and ((AngleList.index(Theta1) - AngleIndex) > 30)):
                 RotationalHashMap["CW"] += 1
-                print(RotationalHashMap["CW"])
-                if RotationalHashMap["CW"] - math.modf(RotationalMotionCW[-1])[1] < 2:
+                if ((RotationalHashMap["CW"] - math.modf(RotationalMotionCW[-1])[1]) < 2):
                     RotationalMotionCW.append(RotationalHashMap["CW"])
                 AngleIndex = AngleList.index(Theta1)
-                #print(Theta1, Theta2, AngleList.index(Theta1))
             else:
                 RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle) 
                 
@@ -109,8 +106,6 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
         else:
             Condition = False
         
-    print(RotationalHashMap)
-    breakpoint()
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 
