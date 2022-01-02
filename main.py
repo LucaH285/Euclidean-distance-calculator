@@ -417,7 +417,7 @@ class circlingBehavior(residualComputations):
                     #MaxY=1080,
                     Vectors = MidpointLabelVector(Midpoints, Coords_To)
                     Quantifier = RF.rotationQuantifier(PositionVecX=Coords_From, PositionVecY=Coords_To, MaxY=self.Resolution[1], 
-                                                       MaxX=self.Resolution[0], CriticalAngle=345)
+                                                       MaxX=self.Resolution[0], CriticalAngle=350)
                     
                     RF.TrackOnVideo(Annotations=Quantifier, videoFile=self.VideoInput, skeleton = SkeletonFrame,
                                     PositionVectorsX=Coords_From, PositionVectorsY=Coords_To, VideoOut = self.VideoOutput)
@@ -478,7 +478,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"D:\Programs\2Minute_Trim\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
     Class = loadPreprocess(FilePath, PValCutoff = 0.6, FPS=4)
     PreProcessedData = Class.__call__()
@@ -505,7 +505,11 @@ if __name__=="__main__":
 
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
+<<<<<<< HEAD
                                 VideoIn = r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+=======
+                                VideoIn = r'D:\Programs\2Minute_Trim\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+>>>>>>> parent of 527fc9c (update)
                                 VideoOut = r"", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     
