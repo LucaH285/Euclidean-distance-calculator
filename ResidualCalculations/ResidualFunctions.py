@@ -58,9 +58,11 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 
     # Compute the CW and CCW rotations, respectively
     AngleIndex = 0
+    AngleIndexCCW = 0
     FrameCount = 0
     Condition = True
     while(Condition):
+        TemporaryAngleList = []
         CCW_CrossVector = False
         for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
             """
@@ -68,29 +70,33 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
             a full cw/ccw rotation.
             """
             if ((Theta1/CriticalAngle >= CriticalAngle/360)
-                and (Theta2/CriticalAngle < 0.25) and (CCW_CrossVector is False)
+                and (Theta2/CriticalAngle < 0.25) and (CCW_CrossVector is False) and (np.sum(TemporaryAngleList) > CriticalAngle)
                 #This argument controls the frame indecces to make sure that Frames are sufficiently 
                 #distanced from each other so as to avoid counting counterclocwise then clockwise motion
                 #that passes the critical angle (happens sometimes)
-                and ((AngleList.index(Theta1) - AngleIndex) > 30)):
+                and ((AngleList.index(Theta1) - AngleIndex) > 10)):
                 RotationalHashMap["CW"] += 1
-                # if ((RotationalHashMap["CW"] - math.modf(RotationalMotionCW[-1])[1]) < 2):
                 RotationalMotionCW.append(RotationalHashMap["CW"])
                 AngleIndex = AngleList.index(Theta1)
+                TemporaryAngleList.clear()
             #Resets the CCW_CrossVector when a new rotation is initiated, i.e.: when the rat crosses the central vector
             #in the clockwise direction without completing a full rotation.
             elif ((Theta1/CriticalAngle >= CriticalAngle/360)
                 and (Theta2/CriticalAngle < 0.25) and (CCW_CrossVector is True) and ((AngleList.index(Theta1) - AngleIndex) > 30)):
                 CCW_CrossVector = False
                 RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle)
+                TemporaryAngleList.clear()
             else:
                 RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle) 
-                   
+                if ((Theta2 - Theta1) > 0):
+                    TemporaryAngleList.append((Theta2 - Theta1)) 
+                    
             if (((Theta2/CriticalAngle < Theta1/CriticalAngle) or (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90)) 
                   and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
-                if (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90):
+                if ((CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90) and (RotationalHashMap["CCWAngle"] < CriticalAngle)):
                     CCW_CrossVector = True
                 else:
+                    CCW_CrossVector = False
                     CCWRotation = (Theta1 - Theta2)/CriticalAngle
                     RotationalHashMap["CCWAngle"] += CCWRotation
                     if RotationalHashMap["CCWAngle"] >= CriticalAngle/360:
@@ -105,7 +111,9 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                     FrameCount = 0
                 RotationalMotionCCW.append(RotationalHashMap["CCW"] + RotationalHashMap["CCWAngle"])
                 FrameCount -= 1
-      
+        """
+        Rounds the rotations up to the nearest whole integer if > 90% of the rotation has been made in either direction.
+        """
         RoundLastCW = math.modf(RotationalMotionCW[-1])[0]
         RoundLastCCW = math.modf(RotationalMotionCCW[-1])[0]
         if ((RoundLastCW > 0.9) or (RoundLastCCW > 0.9)):
@@ -119,20 +127,21 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 Condition = False
         else:
             Condition = False
+    print(RotationalHashMap)
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 
 def rotationQuantifier2(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
     MidpointOfLine_Fxn = lambda PosVec1, PosVec2:[[(V1 + V2)/2 for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PosVec1, PosVec2)]
     MidPointToLabel_Fxn = lambda Midpoints, PosVec: [[V2 - V1 for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(Midpoints, PosVec)]
-   # MaxVectorFunction = lambda 
     MidPointOfLine = MidpointOfLine_Fxn(PositionVecX, PositionVecY)
     MidPointToLabel_Vector = MidPointToLabel_Fxn(MidPointOfLine, PositionVecY)
-   # MaxVector = 
-
+    
+    
     pass
 
-def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, VideoOut):
+def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, VideoOut,
+                 skeleton = []):
     cap = cv2.VideoCapture(videoFile)
     # current_state = False
     # annotation_list = Annotations
@@ -169,7 +178,7 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
             except IndexError:
                 pass
             out.write(frame)
-            # cv2.imshow("Frame", frame)
+            cv2.imshow("Frame", frame)
             i += 1 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
