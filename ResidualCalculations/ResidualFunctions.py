@@ -13,7 +13,7 @@ import matplotlib.pyplot as mp
 import numpy.fft as npfft
 import cv2
 
-def renameCols(InputFileList, BodyParts):
+def renameCols(InputFileList, BodyParts):  
     ColsToUse = [Str for StrInit in BodyParts for Str in [StrInit]*2]
     Reset2ColNames = [[] for _ in range(len(InputFileList))]
     for ColNames in ColsToUse:
@@ -29,55 +29,8 @@ def renameCols(InputFileList, BodyParts):
             Reset2ColNames[Ind].append(Frames)
     return(Reset2ColNames)
 
+
 # def matrixSkeleton(Labels_To = [], Label_From = "", InputFileList):
-    
-def roationQuantifier_(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
-    DirectionVectorsFxn = lambda PositionVec1, PositionVec2: [[V2 - V1  for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PositionVec1, PositionVec2)]
-    MaxVectorFunction = lambda StartPosition, EndPosition: [[EndVecs[0] - StartVecs[0], EndVecs[1] - StartVecs[1]] for StartVecs, EndVecs in zip(StartPosition, EndPosition)]
-    DirectionVectors = DirectionVectorsFxn(PositionVecX, PositionVecY)
-    RotationalHashMap = {"CWAngle":0, "CCWAngle":0, "CW":0, "CCW":0.000, "PartialCW":0, "PartialCCW":0}
-    
-    plotMaxVec_YMax = [[DVectors[0], 0]for DVectors in PositionVecX]
-    plotMaxVec_YMin = [[DVectors[0], MaxY]for DVectors in PositionVecX]
-    plotMaxVec_XMax = [[MaxX, DVectors[1]]for DVectors in PositionVecX]
-    plotMaxVec_XMin = [[0, DVectors[1]]for DVectors in PositionVecX]
-    MaxVectors = MaxVectorFunction(PositionVecX, plotMaxVec_YMax)
-
-    AngleList = []
-    RotationalMotionCW = []
-    RotationalMotionCCW = []
-    for V1, V2 in zip(MaxVectors, DirectionVectors):
-        #Overcome the cross product by crossing the body-head vectors with the maximum vector
-        Cross = np.cross(V1, V2)
-        Theta = math.degrees(math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1)))))
-        if Cross > 0:
-            AngleList.append(Theta)
-        elif Cross < 0:
-            Phi = 360 - Theta
-            AngleList.append(Phi)
-            
-    InitialCondition = True
-    ReferenceAngle = 0
-    # for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
-    #     if ((Theta1 == Theta2) and (InitialCondition == True)):
-    #         pass
-    #     elif ((Theta1 != Theta2) and (InitialCondition == True)):
-    #         InitialCondition == False
-    #         ReferenceAngle = Theta1/CriticalAngle
-    #     else:
-    #         if ((Theta1/CriticalAngle >= ReferenceAngle) and (Theta2/CriticalAngle < CriticalAngle/360)
-    #             and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0):
-                
-                
-            
-                
-        
-
-          
-    return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
-           plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
-    
-    
 
 def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
     DirectionVectorsFxn = lambda PositionVec1, PositionVec2: [[V2 - V1  for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PositionVec1, PositionVec2)]
@@ -103,122 +56,76 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
         elif Cross < 0:
             Phi = 360 - Theta
             AngleList.append(Phi)
-                
+
     # Compute the CW and CCW rotations, respectively
     AngleIndex = 0
+    AngleIndexCCW = 0
     FrameCount = 0
     Condition = True
     while(Condition):
-<<<<<<< HEAD
-        TemporaryAngleList = []
-=======
         CCW_CrossVector = False
->>>>>>> parent of 4fc7b4f (Updates to circling)
         for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
             """
             Another way is to check if a full revolution has occured before counting
             a full cw/ccw rotation.
             """
-<<<<<<< HEAD
-            if ((Theta1/CriticalAngle >= CriticalAngle/360) 
-                and (Theta2/CriticalAngle < 0.25) and (np.sum(TemporaryAngleList) >= CriticalAngle)
-=======
             if ((Theta1/CriticalAngle >= CriticalAngle/360)
                 and (Theta2/CriticalAngle < 0.25) and (CCW_CrossVector is False)
->>>>>>> parent of 4fc7b4f (Updates to circling)
                 #This argument controls the frame indecces to make sure that Frames are sufficiently 
                 #distanced from each other so as to avoid counting counterclocwise then clockwise motion
                 #that passes the critical angle (happens sometimes)
                 and ((AngleList.index(Theta1) - AngleIndex) > 30)):
                 RotationalHashMap["CW"] += 1
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                # if ((RotationalHashMap["CW"] - math.modf(RotationalMotionCW[-1])[1]) < 2):
->>>>>>> parent of 4fc7b4f (Updates to circling)
                 RotationalMotionCW.append(RotationalHashMap["CW"])
-=======
-                if ((RotationalHashMap["CW"] - math.modf(RotationalMotionCW[-1])[1]) < 2):
-                    RotationalMotionCW.append(RotationalHashMap["CW"])
->>>>>>> parent of 527fc9c (update)
                 AngleIndex = AngleList.index(Theta1)
-<<<<<<< HEAD
-                TemporaryAngleList.clear()
-            else:
-                if ((Theta2 - Theta1) > 0):
-                    TemporaryAngleList.append((Theta2 - Theta1))
-                RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle) 
-<<<<<<< HEAD
-                    
-=======
             #Resets the CCW_CrossVector when a new rotation is initiated, i.e.: when the rat crosses the central vector
             #in the clockwise direction without completing a full rotation.
             elif ((Theta1/CriticalAngle >= CriticalAngle/360)
-                and (Theta2/CriticalAngle < 0.25) and (CCW_CrossVector is True) and ((AngleList.index(Theta1) - AngleIndex) > 30)):
+                and (Theta2/CriticalAngle < 0.25) and (CCW_CrossVector is True)): #and ((AngleList.index(Theta1) - AngleIndex) > 30)):
                 CCW_CrossVector = False
                 RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle)
             else:
-                RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle) 
-                   
->>>>>>> parent of 4fc7b4f (Updates to circling)
+                RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle)
             if (((Theta2/CriticalAngle < Theta1/CriticalAngle) or (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90)) 
                   and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
                 if (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90):
                     CCW_CrossVector = True
-                else:
-                    CCWRotation = (Theta1 - Theta2)/CriticalAngle
-                    RotationalHashMap["CCWAngle"] += CCWRotation
-                    if RotationalHashMap["CCWAngle"] >= CriticalAngle/360:
-                        RotationalHashMap["CCW"] += 1
-                        RotationalHashMap["CCWAngle"] = 0
-                        FrameCount = 0
-=======
-                
-            if ((Theta2/CriticalAngle < Theta1/CriticalAngle) and ((Theta1 - Theta2) < CriticalAngle)
-                  and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
-                CCWRotation = (Theta1 - Theta2)/CriticalAngle
-                RotationalHashMap["CCWAngle"] += CCWRotation
-                if RotationalHashMap["CCWAngle"] >= CriticalAngle/360:
-                    RotationalHashMap["CCW"] += 1
-                    RotationalHashMap["CCWAngle"] = 0
-                    FrameCount = 0
->>>>>>> parent of 527fc9c (update)
-                RotationalMotionCCW.append(RotationalHashMap["CCW"] + RotationalHashMap["CCWAngle"])
-                FrameCount += 1
+        CW_CrossVector = False
+        for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
+            if ((Theta2/CriticalAngle >= CriticalAngle/360) and (Theta1/CriticalAngle < 0.25) and (CW_CrossVector is False)
+                and ((AngleList.index(Theta2) - AngleIndexCCW) > 30) 
+                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
+                RotationalHashMap["CCW"] += 1
+                RotationalMotionCCW.append(RotationalHashMap["CCW"])
+                AngleIndexCCW = AngleList.index(Theta2)
+            elif ((Theta2/CriticalAngle >= CriticalAngle/360) and (Theta1/CriticalAngle < 0.25) and (CW_CrossVector is True)
+                and ((AngleList.index(Theta2) - AngleIndexCCW) > 30)):
+                CW_CrossVector = False
+                RotationalMotionCCW.append(RotationalHashMap["CCW"] + (1 - (Theta2/CriticalAngle)))
             else:
-                if FrameCount < 5:
-                    RotationalHashMap["CCWAngle"] = 0.000
-                    FrameCount = 0
-                FrameCount -= 1
-<<<<<<< HEAD
-                RotationalMotionCCW.append(RotationalHashMap["CCW"] + RotationalHashMap["CCWAngle"])
+                RotationalMotionCCW.append(RotationalHashMap["CCW"] + (1 - (Theta2/CriticalAngle)))
+            if ((Theta1/CriticalAngle > Theta2/CriticalAngle) or (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90)
+                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
+                if (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90):
+                    CW_CrossVector = True
         """
         Rounds the rotations up to the nearest whole integer if > 90% of the rotation has been made in either direction.
         """
-=======
-      
->>>>>>> parent of 4fc7b4f (Updates to circling)
-        RoundLastCW = math.modf(RotationalMotionCW[-1])[0]
-        RoundLastCCW = math.modf(RotationalMotionCCW[-1])[0]
-        if ((RoundLastCW > 0.9) or (RoundLastCCW > 0.9)):
-            if RoundLastCW > 0.9:
+        RoundLastCW, RoundLastCWInt = math.modf(RotationalMotionCW[-1])[0], math.modf(RotationalMotionCW[-1])[1]
+        RoundLastCCW, RoundLastCCWInt = math.modf(RotationalMotionCCW[-1])[0], math.modf(RotationalMotionCCW[-1])[1]
+        if (((RoundLastCW > 0.9) or (RoundLastCW < 0.9 and RoundLastCWInt > RotationalHashMap["CW"])) 
+            or ((RoundLastCCW > 0.9) or (RoundLastCCW < 0.9 and RoundLastCCWInt > RotationalHashMap["CCW"]))):
+            if (RoundLastCW > 0.9) or (RoundLastCW < 0.9 and RoundLastCWInt > RotationalHashMap["CW"]):
                 RotationalHashMap["CW"] += 1
                 RotationalMotionCW.append(RotationalHashMap["CW"])
                 Condition = False
-            elif RoundLastCCW > 0.9:
+            elif (RoundLastCCW > 0.9) or (RoundLastCCW < 0.9 and RoundLastCCWInt > RotationalHashMap["CCW"]):
                 RotationalHashMap["CCW"] += 1
                 RotationalMotionCCW.append(RotationalHashMap["CCW"])
                 Condition = False
         else:
             Condition = False
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    
->>>>>>> parent of 527fc9c (update)
     print(RotationalHashMap)
-=======
->>>>>>> parent of 4fc7b4f (Updates to circling)
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 
@@ -269,7 +176,7 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
             except IndexError:
                 pass
             out.write(frame)
-            # cv2.imshow("Frame", frame)
+            cv2.imshow("Frame", frame)
             i += 1 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

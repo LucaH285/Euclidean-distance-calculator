@@ -43,6 +43,9 @@ def checkPVals(DataFrame, CutOff):
     Parameters
     ----------
     Data frames as inputs
+    
+    Takes the three columns that are associated with a label (X, Y, p-val), handled in the while loop
+    changes the 
 
     Returns
     -------
@@ -50,6 +53,7 @@ def checkPVals(DataFrame, CutOff):
     returns a list of body parts as well.
 
     """
+    #This loop assigns the first p-values in all label columns = 1, serve as reference point.
     for Cols in DataFrame.columns.values:
         if Cols % 3 == 0:
             if float(DataFrame[Cols][0]) < CutOff:
@@ -60,6 +64,17 @@ def checkPVals(DataFrame, CutOff):
         DataFrame[Query] = DataFrame[Query].mask(pd.to_numeric(DataFrame[Cols], downcast="float") < CutOff).ffill()
         Cols += 3
     return(DataFrame)
+
+def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom = []):
+    """
+    Should pass the 
+    """
+    
+    
+    
+    print(DataFrame)
+    breakpoint()
+    pass    
 
 def computeEuclideanDistance(DataFrame, BodyParts):
     """
