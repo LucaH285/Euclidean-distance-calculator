@@ -9,6 +9,8 @@ from collections import OrderedDict
 import numpy as np
 from scipy.integrate import quad
 import time
+import copy
+
 
 def preprocessor(DataFrame):
     """
@@ -38,7 +40,8 @@ def preprocessor(DataFrame):
 
 def checkPVals(DataFrame, CutOff):
     """
-    Function responsible for processing p-values, namely omitting
+    Function responsible for processing p-values, namely omitting pvalues and their associated
+    coordinates by forward filling the last valid observation as defined by the cutoff limit (user defined)
 
     Parameters
     ----------
@@ -59,20 +62,89 @@ def checkPVals(DataFrame, CutOff):
             if float(DataFrame[Cols][0]) < CutOff:
                 DataFrame.loc[0, Cols] = 1.0
     Cols = 3
+    #While loop iterating through every 3rd column (p-val column)
+    #ffill = forward fill, propagates last valid observation forward. 
+    #Values with p-val < cutoff masked.
     while Cols <= max(DataFrame.columns.values):
         Query = [i for i in range(Cols-2, Cols+1)]
         DataFrame[Query] = DataFrame[Query].mask(pd.to_numeric(DataFrame[Cols], downcast="float") < CutOff).ffill()
         Cols += 3
     return(DataFrame)
 
-def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom = []):
+def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLabel):
     """
-    Should pass the 
+    Function responsible for processing p-values, namely omitting
+
+    Parameters
+    ----------
+    Data frames as inputs
+    
+    Takes the three columns that are associated with a label (X, Y, p-val), handled in the while loop
+    changes the 
+
+    Returns
+    -------
+    The function returns a list of these preprocessed frames.
+    returns a list of body parts as well.
+
     """
+    #Get the average geometric vector between ears and head 
+    #given the p-val > cutoff
+    ExtractHighPVal = copy.copy(DataFrame)
+    Cols = 3
+    while Cols <= max(ExtractHighPVal.columns.values):
+        Query = [i for i in range(Cols-2, Cols+1)]
+        ExtractHighPVal[Query] = ExtractHighPVal[Query].mask(pd.to_numeric(ExtractHighPVal[Cols], downcast="float") < CutOff).fillna(np.nan)
+        Cols += 3    
+    #Convert all values to float from string
+    for Cols in ExtractHighPVal.columns.values:
+        ExtractHighPVal[Cols] = pd.to_numeric(ExtractHighPVal[Cols], downcast="float")
+        DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
+    #RenameCols (optimize later)
+    FeatureList = ["_x", "_y", "p-val"]
+    Ind = 0
+    Ind2 = 0
+    for Cols in ExtractHighPVal.columns.values:
+        if Ind <= 2:
+            ExtractHighPVal = ExtractHighPVal.rename(columns={Cols:f"{colNames[Ind2]}{FeatureList[Ind]}"})
+            if Ind == 2:
+                Ind = 0
+                Ind2 += 1
+            else:
+                Ind += 1
+    PositionVectors = lambda XCoords, YCoords: [[X, Y] for X, Y in zip(XCoords, YCoords)]
+    VectorFunction = lambda StartVec, EndVec: [[Y - X for X, Y in zip(Vec1, Vec2) 
+                                                if X != np.nan and Y != np.nan] 
+                                               for Vec1, Vec2 in zip(StartVec, EndVec)]
+    PredictLabelPosVec = PositionVectors(XCoords=ExtractHighPVal[f"{PredictLabel}_x"], YCoords=ExtractHighPVal[f"{PredictLabel}_y"])
+    FromLabelPosVec = [PositionVectors(XCoords=ExtractHighPVal[f"{Label}_x"], YCoords=ExtractHighPVal[f"{Label}_y"]) for Label in LabelsFrom]
+    DirectionVectors = [VectorFunction(FromLabels, PredictLabelPosVec) for FromLabels in FromLabelPosVec]
+    #Change the values of x, y and p in the original dataframe to the forward filled and predicted location (forward-fill p-val and adjust x, y)
+    #for x, y, Direction in zip(ExtractHighPVal[f"{PredictLabel}_x"], ExtractHighPVal
+    """
+    Masking all low p-value removes them from the dataframe
     
     
-    
-    print(DataFrame)
+    For some reason dataframe is being preprocesed, low pvalues are masked when I create a seperate variable
+    for that
+    """
+    OldColumns = list(DataFrame.columns.values)
+    NewColumns = list(ExtractHighPVal.columns.values)
+    DataFrame = DataFrame.rename(columns={OldColumns[Ind]: NewColumns[Ind] for Ind in range(len(OldColumns))})
+    Counter = 0
+    for Ind in DataFrame.index.values:
+        if ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (DataFrame[f"{LabelsFrom[0]}p-val"][Ind]) > CutOff):
+            #forwardfill
+            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DirectionVectors[0][Ind][0]
+            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelsFrom[0]}_y"][Ind] + DirectionVectors[0][Ind][1]
+            Counter += 1
+        elif ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (DataFrame[f"{LabelsFrom[1]}p-val"][Ind]) > CutOff):
+            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelsFrom[1]}_x"][Ind] + DirectionVectors[1][Ind][0]
+            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelsFrom[1]}_y"][Ind] + DirectionVectors[1][Ind][1] 
+            Counter += 1
+            
+            
+    print(Counter, len(DataFrame.index.values))
     breakpoint()
     pass    
 

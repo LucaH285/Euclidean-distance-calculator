@@ -45,7 +45,8 @@ class loadPreprocess(object):
         for Index, Files in enumerate(self.loadFiles()):
             for Frames in Files:
                 Preprocess = EDFunctions.preprocessor(Frames)
-                PValAdjust = EDFunctions.checkPVals(Preprocess[0], self.PVal)
+                PValAdjust = EDFunctions.predictLabelLocation(Preprocess[0], self.PVal, LOI="", 
+                                                              LabelsFrom=["Left_Ear", "Right_Ear"], colNames = Preprocess[1], PredictLabel="Head")
                 PreprocessedFrames[Index].append(PValAdjust)
                 self.BodyPartList.append(Preprocess[1])
         return(PreprocessedFrames)
@@ -457,7 +458,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"F:\WorkFiles_XCELLeration\Video\2Minute_Trim\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"F:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
     Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4)
     PreProcessedData = Class.__call__()
