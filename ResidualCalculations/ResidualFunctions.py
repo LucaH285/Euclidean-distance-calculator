@@ -182,7 +182,6 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
                 break
             elif cv2.waitKey(1) & 0xFF == ord('p'):
                 time.sleep(3)
-                
         else:
             break
     cap.release()

@@ -10,6 +10,7 @@ import numpy as np
 from scipy.integrate import quad
 import time
 import copy
+import itertools
 
 
 def preprocessor(DataFrame):
@@ -119,8 +120,7 @@ def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLa
     PredictLabelPosVec = PositionVectors(XCoords=ExtractHighPVal[f"{PredictLabel}_x"], YCoords=ExtractHighPVal[f"{PredictLabel}_y"])
     FromLabelPosVec = [PositionVectors(XCoords=ExtractHighPVal[f"{Label}_x"], YCoords=ExtractHighPVal[f"{Label}_y"]) for Label in LabelsFrom]
     DirectionVectors = [VectorFunction(FromLabels, PredictLabelPosVec) for FromLabels in FromLabelPosVec]
-    #Change the values of x, y and p in the original dataframe to the forward filled and predicted location (forward-fill p-val and adjust x, y)
-    #for x, y, Direction in zip(ExtractHighPVal[f"{PredictLabel}_x"], ExtractHighPVal
+    DirectionVector_Dict = {LabelsFrom[Ind]:DirectionVectors[Ind] for Ind in range(len(DirectionVectors))}
     """
     Masking all low p-value removes them from the dataframe
     
@@ -131,22 +131,28 @@ def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLa
     OldColumns = list(DataFrame.columns.values)
     NewColumns = list(ExtractHighPVal.columns.values)
     DataFrame = DataFrame.rename(columns={OldColumns[Ind]: NewColumns[Ind] for Ind in range(len(OldColumns))})
-    Counter = 0
+    LabelToUse = []
+    Ind = 0
+    while Ind < len(DataFrame.index.values):
+        Check = False
+        for Labels in LabelsFrom:
+            if ((DataFrame[f"{Labels}p-val"][Ind] >= CutOff) and (str(DirectionVector_Dict[Labels][Ind][0]) != "nan")):
+                LabelToUse.append(Labels)
+                Check = True
+                break
+        if Check == False:
+            LabelToUse.append("None")
+        Ind += 1
+    # print(LabelToUse)
+    # breakpoint()
     for Ind in DataFrame.index.values:
-        if ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (DataFrame[f"{LabelsFrom[0]}p-val"][Ind]) > CutOff):
-            #forwardfill
-            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DirectionVectors[0][Ind][0]
-            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelsFrom[0]}_y"][Ind] + DirectionVectors[0][Ind][1]
-            Counter += 1
-        elif ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (DataFrame[f"{LabelsFrom[1]}p-val"][Ind]) > CutOff):
-            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelsFrom[1]}_x"][Ind] + DirectionVectors[1][Ind][0]
-            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelsFrom[1]}_y"][Ind] + DirectionVectors[1][Ind][1] 
-            Counter += 1
-            
-            
-    print(Counter, len(DataFrame.index.values))
-    breakpoint()
-    pass    
+        if ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (LabelToUse[Ind] != "None")):
+            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelToUse[Ind]}_x"][Ind] + DirectionVector_Dict[LabelToUse[Ind]][Ind][0]
+            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelToUse[Ind]}_y"][Ind] + DirectionVector_Dict[LabelToUse[Ind]][Ind][1]
+            DataFrame[f"{PredictLabel}p-val"][Ind] = 1.5
+    DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(NewColumns))})
+    # DataFrame.to_csv(r"D:\WorkFiles_XCELLeration\Video\2minTrim_end\Corrected.csv")
+    return(DataFrame)   
 
 def computeEuclideanDistance(DataFrame, BodyParts):
     """

@@ -29,10 +29,14 @@ class loadPreprocess(object):
     BodyPartList = []
     PreProcessedFrames = []
 
-    def __init__(self, FilePath, PValCutoff, FPS):
+    def __init__(self, FilePath, PValCutoff, FPS, Predict,
+                 ReferenceLabels, PredictLabel):
         self.Source = FilePath
         self.PVal = PValCutoff
         self.FramesPerSecond = FPS
+        self.predict_label = Predict
+        self.ReferenceLabel = ReferenceLabels
+        self.LabelToPredict = PredictLabel
 
     def loadFiles(self):
         Frames = []
@@ -45,8 +49,12 @@ class loadPreprocess(object):
         for Index, Files in enumerate(self.loadFiles()):
             for Frames in Files:
                 Preprocess = EDFunctions.preprocessor(Frames)
-                PValAdjust = EDFunctions.predictLabelLocation(Preprocess[0], self.PVal, LOI="", 
-                                                              LabelsFrom=["Left_Ear", "Right_Ear"], colNames = Preprocess[1], PredictLabel="Head")
+                if self.predict_label == True:
+                    Predict = EDFunctions.predictLabelLocation(Preprocess[0], self.PVal, LOI="", 
+                                                                  LabelsFrom=self.ReferenceLabel, colNames = Preprocess[1], PredictLabel=self.LabelToPredict)
+                elif self.predict_label == False:
+                    Predict = Preprocess[0]
+                PValAdjust = EDFunctions.checkPVals(Predict, self.PVal)
                 PreprocessedFrames[Index].append(PValAdjust)
                 self.BodyPartList.append(Preprocess[1])
         return(PreprocessedFrames)
@@ -357,32 +365,9 @@ class circlingBehavior(residualComputations):
         self.Resolution = ScreenRes
         self.Labels_To = [kwargs[Labels] for Labels in kwargs]
         
-    def vectorSkeleton(self, Labels_ToList, Labels_From, Adjusted_InputFileList):
-        Vectors = lambda StartLabel_AsList, Labels_AsList: [[V2 - V1 for V1, V2 in zip(StartVec, EndVec)] for StartVec, EndVec in zip(StartLabel_AsList, Labels_AsList)]
-        NormVectors = lambda VectorList: [np.sqrt(np.sum([Vals**2 for Vals in vectors])) for vectors in VectorList]
-        VectorAngles = lambda VectorList1, VectorList2: [math.degrees(math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1))))) for V1, V2 in zip(VectorList1, VectorList2)]
-        PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
-        LabelList = [Labels_From] + Labels_ToList
-        VectorList = [
-            PositionVectorFunction(CoordsX=Files[Ind][Labels+"_x"], CoordsY=Files[Ind][Labels+"_y"]) 
-            for Labels in LabelList
-            for Ind, Files in enumerate(Adjusted_InputFileList)
-            ]
-        VectorFrame = pd.DataFrame(VectorList).T
-        ColDict = {VectorFrame.columns.values[Cols]:LabelList[Cols] for Cols in range(len(VectorFrame.columns.values))}
-        VectorFrame_Renamed = VectorFrame.rename(ColDict, axis="columns")
-        DirectionVectorList = [Vectors(VectorFrame_Renamed[Labels_From], VectorFrame_Renamed[LabelsTo]) for LabelsTo in Labels_ToList]
-        Norms = [NormVectors(Vec) for Vec in DirectionVectorList]
-        
-        print(DirectionVectorList[0:100])
-        breakpoint()
-        pass
-
     def residualcomputation(self, InputFileList):
         if set([self.LabelsToTrack_From]).issubset(self.AllLabels) and set([self.LabelsToTrack_From]).issubset(self.AllLabels):
             FileList = RF.renameCols(InputFileList=InputFileList, BodyParts=self.AllLabels)
-
-            # self.vectorSkeleton(self.Labels_To+[self.LabelsToTrack_To], self.LabelsToTrack_From, Adjusted_InputFileList = FileList)
             
             PositionVectorFunction = lambda CoordsX, CoordsY: [[x, y] for x, y in zip(pd.to_numeric(CoordsX, downcast="float"), pd.to_numeric(CoordsY, downcast="float"))]
             Midpoint = lambda PosVec1, PosVec2: [[(1/2)*(i + j) for i, j in zip(Vals1, Vals2)] for Vals1, Vals2 in zip(PosVec1, PosVec2)]
@@ -401,7 +386,6 @@ class circlingBehavior(residualComputations):
                     
                     RF.TrackOnVideo(Annotations=Quantifier, videoFile=self.VideoInput,
                                     PositionVectorsX=Coords_From, PositionVectorsY=Coords_To, VideoOut = self.VideoOutput)
-                    breakpoint()
 
         else:
             raise(KeyError("Label(s) of interest not tracked by DLC"))
@@ -458,9 +442,9 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"F:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"D:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
-    Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4)
+    Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4, Predict = True, ReferenceLabels=["Tail", "Body", "Right_Ear", "Left_Ear"], PredictLabel="Head")
     PreProcessedData = Class.__call__()
 
     #EuclideanDistances = computeEuclideanDistance(BodyPartList = PreProcessedData[1][0]).compute(InputFileList=PreProcessedData[0])
@@ -485,7 +469,7 @@ if __name__=="__main__":
 
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
-                                VideoIn = r'F:\WorkFiles_XCELLeration\Video\2Minute_Trim\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+                                VideoIn = r'D:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
                                 VideoOut = r"", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     
