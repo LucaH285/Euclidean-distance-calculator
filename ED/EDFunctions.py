@@ -89,70 +89,41 @@ def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLa
     returns a list of body parts as well.
 
     """
-    #Get the average geometric vector between ears and head 
-    #given the p-val > cutoff
-    ExtractHighPVal = copy.copy(DataFrame)
-    Cols = 3
-    while Cols <= max(ExtractHighPVal.columns.values):
-        Query = [i for i in range(Cols-2, Cols+1)]
-        ExtractHighPVal[Query] = ExtractHighPVal[Query].mask(pd.to_numeric(ExtractHighPVal[Cols], downcast="float") < CutOff).fillna(np.nan)
-        Cols += 3    
-    #Convert all values to float from string
-    for Cols in ExtractHighPVal.columns.values:
-        ExtractHighPVal[Cols] = pd.to_numeric(ExtractHighPVal[Cols], downcast="float")
-        DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
-    #RenameCols (optimize later)
-    FeatureList = ["_x", "_y", "p-val"]
-    Ind = 0
+    OldColumns = list(DataFrame.columns.values)
+    FeatureList = ["_x", "_y", "_p-val"]
+    Ind1 = 0
     Ind2 = 0
-    for Cols in ExtractHighPVal.columns.values:
-        if Ind <= 2:
-            ExtractHighPVal = ExtractHighPVal.rename(columns={Cols:f"{colNames[Ind2]}{FeatureList[Ind]}"})
-            if Ind == 2:
-                Ind = 0
+    for Cols in DataFrame.columns.values:
+        if Ind1 <= 2:
+            DataFrame = DataFrame.rename(columns={Cols:f"{colNames[Ind2]}{FeatureList[Ind1]}"})
+            if Ind1 == 2:
+                Ind1 = 0
                 Ind2 += 1
             else:
-                Ind += 1
-    PositionVectors = lambda XCoords, YCoords: [[X, Y] for X, Y in zip(XCoords, YCoords)]
-    VectorFunction = lambda StartVec, EndVec: [[Y - X for X, Y in zip(Vec1, Vec2) 
-                                                if X != np.nan and Y != np.nan] 
-                                               for Vec1, Vec2 in zip(StartVec, EndVec)]
-    PredictLabelPosVec = PositionVectors(XCoords=ExtractHighPVal[f"{PredictLabel}_x"], YCoords=ExtractHighPVal[f"{PredictLabel}_y"])
-    FromLabelPosVec = [PositionVectors(XCoords=ExtractHighPVal[f"{Label}_x"], YCoords=ExtractHighPVal[f"{Label}_y"]) for Label in LabelsFrom]
-    DirectionVectors = [VectorFunction(FromLabels, PredictLabelPosVec) for FromLabels in FromLabelPosVec]
-    DirectionVector_Dict = {LabelsFrom[Ind]:DirectionVectors[Ind] for Ind in range(len(DirectionVectors))}
-    """
-    Masking all low p-value removes them from the dataframe
-    
-    
-    For some reason dataframe is being preprocesed, low pvalues are masked when I create a seperate variable
-    for that
-    """
-    OldColumns = list(DataFrame.columns.values)
-    NewColumns = list(ExtractHighPVal.columns.values)
-    DataFrame = DataFrame.rename(columns={OldColumns[Ind]: NewColumns[Ind] for Ind in range(len(OldColumns))})
-    LabelToUse = []
-    Ind = 0
-    while Ind < len(DataFrame.index.values):
-        Check = False
-        for Labels in LabelsFrom:
-            if ((DataFrame[f"{Labels}p-val"][Ind] >= CutOff) and (str(DirectionVector_Dict[Labels][Ind][0]) != "nan")):
-                LabelToUse.append(Labels)
-                Check = True
-                break
-        if Check == False:
-            LabelToUse.append("None")
-        Ind += 1
-    # print(LabelToUse)
-    # breakpoint()
-    for Ind in DataFrame.index.values:
-        if ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (LabelToUse[Ind] != "None")):
-            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelToUse[Ind]}_x"][Ind] + DirectionVector_Dict[LabelToUse[Ind]][Ind][0]
-            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelToUse[Ind]}_y"][Ind] + DirectionVector_Dict[LabelToUse[Ind]][Ind][1]
-            DataFrame[f"{PredictLabel}p-val"][Ind] = 1.5
-    DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(NewColumns))})
-    # DataFrame.to_csv(r"D:\WorkFiles_XCELLeration\Video\2minTrim_end\Corrected.csv")
-    return(DataFrame)   
+                Ind1 += 1
+    NewColumns = list(DataFrame.columns.values)
+    for Cols in DataFrame.columns.values:
+        DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
+    ReferenceDirection = []
+    for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
+        if (PVals < CutOff):
+            ##############
+            #Choose surrounding label
+            ##############
+            AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
+            if (len(AdjacentLabel) != 0):
+                if (DataFrame[f"{PredictLabel}_p-val"][Ind - 1] >= CutOff):
+                    DirectionVec = [DataFrame[f"{PredictLabel}_x"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1], 
+                                    DataFrame[f"{PredictLabel}_y"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
+                    ReferenceDirection = DirectionVec
+                Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
+                                DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
+                Scale = [Ji + Jj for Ji, Jj in zip(Displacement, ReferenceDirection)]
+                DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0]
+                DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]
+                DataFrame[f"{PredictLabel}_p-val"] = 1.0
+    DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
+    return(DataFrame)  
 
 def computeEuclideanDistance(DataFrame, BodyParts):
     """

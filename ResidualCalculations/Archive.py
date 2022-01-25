@@ -311,14 +311,12 @@ def circlingBehaviour3(Midpoints, VectorList, MaxY, MaxX, CriticalAngle):
                 AngleList.append(Phi)
                 
         # for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
-        #     """
         #     Notice:
         #         that if Theta2 > Theta1 is defined then when theta2 is < Critical angle
         #         it will be treated as a CCW rotation.
                 
         #         So you cannot define the CW motion like this, however, it should be enough to 
         #         do it as you were with the various conditions. On the CCW motion you should use Theta1 < Theta2
-        #     """
         #     if (Theta2 > Theta1):
         #         if (Theta1 >= CriticalAngle) and (Theta2 < CriticalAngle):
         #             print(AngleList.index(Theta1))
@@ -383,4 +381,155 @@ def circlingBehaviour3(Midpoints, VectorList, MaxY, MaxX, CriticalAngle):
         print(RotationalHashMap)
         return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
                plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
+#####################################################################
+#Jan 22, 2022 - EDFunctions predictor function V1
+#####################################################################
+
+    #Scale
+    ScaleVector = [[] for _ in range(len(DirectionVectors))]
+    for Labels1, Labels2, Ind in zip(Displacement, DirectionVectors, range(len(DirectionVectors))):
+        for V1, V2 in zip(Labels1, Labels2):
+            print(V1, V2)
+            time.sleep(0.05)
+            Scale = [X + Y for X, Y in zip(V1, V2)]
+            ScaleVector[Ind].append(Scale)
+    
+    DirectionVector_Dict = {LabelsFrom[Ind]:DirectionVectors[Ind] for Ind in range(len(DirectionVectors))}
+    DisplacementVector_Dict = {LabelsFrom[Ind]:Displacement[Ind] for Ind in range(len(Displacement))}
+    ScaleVector_Dict = {LabelsFrom[Ind]:ScaleVector[Ind] for Ind in range(len(ScaleVector))}
+
+    OldColumns = list(DataFrame.columns.values)
+    NewColumns = list(ExtractHighPVal.columns.values)
+    DataFrame = DataFrame.rename(columns={OldColumns[Ind]: NewColumns[Ind] for Ind in range(len(OldColumns))})
+    LabelToUse = []
+    Ind = 0
+    CountNone = 0
+    while Ind < len(DataFrame.index.values):
+        Check = False
+        for Labels in LabelsFrom:
+            if ((DataFrame[f"{Labels}p-val"][Ind] >= CutOff)
+                and (str(ScaleVector_Dict[Labels][Ind][0]) != "nan")):
+                LabelToUse.append(Labels)
+                Check = True
+                break
+        if Check == False:
+            LabelToUse.append("None")
+            CountNone += 1
+        Ind += 1
+    print(CountNone)
+    #Predict the location of the head label by adding the availble surrounding label displacement vector
+    #With the last available surrounding label - target label direction vector and scale the last available 
+    #surrounding label 
+    for Ind in DataFrame.index.values:
+        if ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff)):
+            print(DataFrame[f"{PredictLabel}p-val"][Ind], LabelToUse[Ind])
+            time.sleep(0.5)
+            
+
+    for Ind in DataFrame.index.values:
+        if ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (LabelToUse[Ind] != "None")):
+            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelToUse[Ind]}_x"][Ind] + DirectionVector_Dict[LabelToUse[Ind]][Ind][0]
+            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelToUse[Ind]}_y"][Ind] + DirectionVector_Dict[LabelToUse[Ind]][Ind][1]
+            DataFrame[f"{PredictLabel}p-val"][Ind] = 1.5
+    DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(NewColumns))})
+    DataFrame.to_csv(r"F:\WorkFiles_XCELLeration\Video\2minTrim_end\Corrected2.csv")
+    
+    """
+
 """
+    #Get the average geometric vector between ears and head 
+    #given the p-val > cutoff
+    ExtractHighPVal = copy.copy(DataFrame)
+    Cols = 3
+    while Cols <= max(ExtractHighPVal.columns.values):
+        Query = [i for i in range(Cols-2, Cols+1)]
+        ExtractHighPVal[Query] = ExtractHighPVal[Query].mask(pd.to_numeric(ExtractHighPVal[Cols], downcast="float") < CutOff).fillna(np.nan)
+        Cols += 3    
+    #Convert all values to float from string
+    for Cols in ExtractHighPVal.columns.values:
+        ExtractHighPVal[Cols] = pd.to_numeric(ExtractHighPVal[Cols], downcast="float")
+        DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
+    #RenameCols (optimize later)
+    FeatureList = ["_x", "_y", "p-val"]
+    Ind = 0
+    Ind2 = 0
+    for Cols in ExtractHighPVal.columns.values:
+        if Ind <= 2:
+            ExtractHighPVal = ExtractHighPVal.rename(columns={Cols:f"{colNames[Ind2]}{FeatureList[Ind]}"})
+            if Ind == 2:
+                Ind = 0
+                Ind2 += 1
+            else:
+                Ind += 1
+    PositionVectors = lambda XCoords, YCoords: [[X, Y] for X, Y in zip(XCoords, YCoords)]
+    VectorFunction = lambda StartVec, EndVec: [[Y - X for X, Y in zip(Vec1, Vec2) 
+                                                if X != np.nan and Y != np.nan] 
+                                               for Vec1, Vec2 in zip(StartVec, EndVec)]
+    PredictLabelPosVec = PositionVectors(XCoords=ExtractHighPVal[f"{PredictLabel}_x"], YCoords=ExtractHighPVal[f"{PredictLabel}_y"])
+    FromLabelPosVec = [PositionVectors(XCoords=ExtractHighPVal[f"{Label}_x"], YCoords=ExtractHighPVal[f"{Label}_y"]) for Label in LabelsFrom]
+    #direction vectors from the surrounding labels and the label to predict
+    DirectionVectors = [VectorFunction(FromLabels, PredictLabelPosVec) for FromLabels in FromLabelPosVec]
+    #displacement vectors of the sorrounding labels as they change per frame
+    Displacement = [[] for _ in range(len(DirectionVectors))]
+    for Ind, Labels in enumerate(FromLabelPosVec):
+        for V1, V2 in zip(Labels[:-1], Labels[1:]):
+            if len(Displacement[Ind]) == 0:
+                Displacement[Ind].append([np.nan, np.nan])
+            Function = [J2 - J1 for J1, J2 in zip(V1, V2)]
+            Displacement[Ind].append(Function)
+            
+    DirectionVectorsDict = {LabelsFrom[Ind]: DirectionVectors[Ind] for Ind in range(len(DirectionVectors))}
+    DisplacementVectorsDict = {LabelsFrom[Ind]: Displacement[Ind] for Ind in range(len(Displacement))}
+    OldColumns = list(DataFrame.columns.values)
+    NewColumns = list(ExtractHighPVal.columns.values)
+    DataFrame = DataFrame.rename(columns={OldColumns[Ind]: NewColumns[Ind] for Ind in range(len(OldColumns))})
+    LabelToUse = []
+    Ind = 0
+    while Ind < len(DataFrame.index.values):
+        Check = False
+        for Labels in LabelsFrom:
+            if ((DataFrame[f"{Labels}p-val"][Ind] >= CutOff) 
+                and (str(DisplacementVectorsDict[Labels][Ind][0]) != "nan")
+                and (str(DirectionVectorsDict[Labels][Ind - 1][0]) != "nan")):
+                LabelToUse.append(Labels)
+                Check = True
+                break
+        if Check == False:
+            LabelToUse.append("None")
+        Ind += 1
+    Counter = 0
+    """
+    Direction vectors at index Ind will always be 0 since the head label itself is absent
+    """
+    for Ind in DataFrame.index.values:
+        if ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (LabelToUse[Ind] != "None")):
+            Scale = [I1 + I2 for I1, I2 in zip(DisplacementVectorsDict[LabelToUse[Ind]][Ind], DirectionVectorsDict[LabelToUse[Ind]][Ind - 1])]
+            DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{LabelToUse[Ind]}_x"][Ind] + Scale[0]
+            DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{LabelToUse[Ind]}_y"][Ind] + Scale[1]
+            DataFrame[f"{PredictLabel}p-val"][Ind] = 1.5
+        elif ((DataFrame[f"{PredictLabel}p-val"][Ind] < CutOff) and (LabelToUse[Ind] == "None")):
+            print([DataFrame[f"{Label}p-val"][Ind] for Label in LabelsFrom])
+            Counter += 1
+    #DataFrame.to_csv(r"F:\WorkFiles_XCELLeration\Video\2minTrim_end\Corrected3.csv")
+    DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(NewColumns))})
+
+
+
+"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
