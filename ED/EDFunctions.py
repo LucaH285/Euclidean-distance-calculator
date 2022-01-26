@@ -105,6 +105,7 @@ def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLa
     for Cols in DataFrame.columns.values:
         DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
     ReferenceDirection = []
+    ReferenceDisplacement = []
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
         if (PVals < CutOff):
             ##############
@@ -118,12 +119,23 @@ def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLa
                     ReferenceDirection = DirectionVec
                 Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
                                 DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
+                ReferenceDisplacement = Displacement
                 Scale = [Ji + Jj for Ji, Jj in zip(Displacement, ReferenceDirection)]
                 DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0]
                 DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]
                 DataFrame[f"{PredictLabel}_p-val"] = 1.0
+            elif (len(AdjacentLabel) == 0):
+                Scale = [Ji + Jj for Ji, Jj in zip(ReferenceDisplacement, ReferenceDirection)]
+                DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0]
+                DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]
+                DataFrame[f"{PredictLabel}_p-val"] = 1.0
+                
+                
     DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
-    return(DataFrame)  
+    return(DataFrame) 
+
+def predictLabel_MidpointAdjacent():
+    pass
 
 def computeEuclideanDistance(DataFrame, BodyParts):
     """

@@ -442,7 +442,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"F:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"D:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
     Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4, Predict = True, ReferenceLabels=["Right_Ear", "Left_Ear"], PredictLabel="Head")
     PreProcessedData = Class.__call__()
@@ -469,8 +469,8 @@ if __name__=="__main__":
 
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
-                                VideoIn = r'F:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
-                                VideoOut = r"F:\WorkFiles_XCELLeration\Video\CorrectedV1.avi", AllLabels=PreProcessedData[1][0],
+                                VideoIn = r'D:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+                                VideoOut = r"", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     
                                                                                                       
