@@ -72,7 +72,7 @@ def checkPVals(DataFrame, CutOff):
         Cols += 3
     return(DataFrame)
 
-def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLabel):
+def predictLabelLocation(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
     """
     Function responsible for processing p-values, namely omitting
 
@@ -91,51 +91,66 @@ def predictLabelLocation(DataFrame, CutOff, LOI, LabelsFrom, colNames, PredictLa
     """
     OldColumns = list(DataFrame.columns.values)
     FeatureList = ["_x", "_y", "_p-val"]
-    Ind1 = 0
-    Ind2 = 0
-    for Cols in DataFrame.columns.values:
-        if Ind1 <= 2:
-            DataFrame = DataFrame.rename(columns={Cols:f"{colNames[Ind2]}{FeatureList[Ind1]}"})
-            if Ind1 == 2:
-                Ind1 = 0
-                Ind2 += 1
-            else:
-                Ind1 += 1
+    NewCols = [f"{ColName}{Feature}" for ColName, Feature in itertools.product(colNames, FeatureList)]
+    DataFrame = DataFrame.rename(columns={DataFrame.columns.values[Ind]:NewCols[Ind] for Ind in range(len(NewCols))})
     NewColumns = list(DataFrame.columns.values)
     for Cols in DataFrame.columns.values:
         DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
     ReferenceDirection = []
-    ReferenceDisplacement = []
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
         if (PVals < CutOff):
             ##############
             #Choose surrounding label
             ##############
             AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
-            if (len(AdjacentLabel) != 0):
+            if ((len(AdjacentLabel) != 0) and (Ind != 0)):
                 if (DataFrame[f"{PredictLabel}_p-val"][Ind - 1] >= CutOff):
                     DirectionVec = [DataFrame[f"{PredictLabel}_x"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1], 
                                     DataFrame[f"{PredictLabel}_y"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
                     ReferenceDirection = DirectionVec
+                elif ((DataFrame[f"{PredictLabel}_p-val"][Ind - 1] < CutOff) and (len(ReferenceDirection) == 0)):
+                    ReferenceDirection = [0, 0]
                 Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
                                 DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
-                ReferenceDisplacement = Displacement
-                Scale = [Ji + Jj for Ji, Jj in zip(Displacement, ReferenceDirection)]
+                Scale = [Ji + Jj for Ji, Jj in zip(ReferenceDirection, Displacement)]
                 DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0]
                 DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]
-                DataFrame[f"{PredictLabel}_p-val"] = 1.0
-            elif (len(AdjacentLabel) == 0):
-                Scale = [Ji + Jj for Ji, Jj in zip(ReferenceDisplacement, ReferenceDirection)]
-                DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0]
-                DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]
-                DataFrame[f"{PredictLabel}_p-val"] = 1.0
-                
-                
+                DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.0 
+    # DataFrame.to_csv(r'F:\WorkFiles_XCELLeration\Video\Trim2\DF.csv')
     DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
     return(DataFrame) 
 
-def predictLabel_MidpointAdjacent():
-    pass
+def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
+    OldColumns = list(DataFrame.columns.values)
+    FeatureList = ["_x", "_y", "_p-val"]
+    NewCols = [f"{ColName}{Feature}" for ColName, Feature in itertools.product(colNames, FeatureList)]
+    DataFrame = DataFrame.rename(columns={DataFrame.columns.values[Ind]:NewCols[Ind] for Ind in range(len(NewCols))})
+    NewColumns = list(DataFrame.columns.values)
+    for Cols in DataFrame.columns.values:
+        DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
+    ReferenceMid = []
+    FactorDict = {"Angle":0}
+    for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
+        AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
+        if (PVals < CutOff):  
+            if ((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] and DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) >= CutOff):
+               MidPoint = [(DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DataFrame[f"{LabelsFrom[1]}_x"][Ind])/2,
+                           (DataFrame[f"{LabelsFrom[0]}_y"][Ind] + DataFrame[f"{LabelsFrom[1]}_y"][Ind])/2]
+               ReferenceMid = MidPoint
+            elif (((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] or DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) < CutOff)
+                  and (len(AdjacentLabel) != 0)):
+                Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
+                                DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
+                ReferenceMid = [ReferenceMid[0] + Displacement[0], ReferenceMid[1] + Displacement[1]]
+            DataFrame[f"{PredictLabel}_x"][Ind] = ReferenceMid[0]
+            DataFrame[f"{PredictLabel}_y"][Ind] = ReferenceMid[1]
+            DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.0
+        # else:
+        #     DataFrame[f"{PredictLabel}_x"][Ind] = 
+        #     DataFrame[f"{PredictLabel}_y"][Ind] = 
+    DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
+    return(DataFrame)
+
 
 def computeEuclideanDistance(DataFrame, BodyParts):
     """
