@@ -50,7 +50,7 @@ class loadPreprocess(object):
             for Frames in Files:
                 Preprocess = EDFunctions.preprocessor(Frames)
                 if self.predict_label == True:
-                    Predict = EDFunctions.predictLabel_MidpointAdjacent(Preprocess[0], self.PVal, 
+                    Predict = EDFunctions.predictLabelLocation(Preprocess[0], self.PVal, 
                                                                   LabelsFrom=self.ReferenceLabel, 
                                                                   colNames = Preprocess[1], 
                                                                   PredictLabel=self.LabelToPredict)
@@ -444,9 +444,9 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"F:\WorkFiles_XCELLeration\Video\Trim2\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"D:\WorkFiles_XCELLeration\Video\Trim2\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
-    Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4, Predict = True, ReferenceLabels=["Right_Ear", "Left_Ear", "Body"], PredictLabel="Head")
+    Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4, Predict = True, ReferenceLabels=["Right_Ear", "Left_Ear"], PredictLabel="Head")
     PreProcessedData = Class.__call__()
 
     #EuclideanDistances = computeEuclideanDistance(BodyPartList = PreProcessedData[1][0]).compute(InputFileList=PreProcessedData[0])
@@ -470,7 +470,7 @@ if __name__=="__main__":
 
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
-                                VideoIn = r'F:\WorkFiles_XCELLeration\Video\Trim2\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+                                VideoIn = r'D:\WorkFiles_XCELLeration\Video\Trim2\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
                                 VideoOut = r"", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     

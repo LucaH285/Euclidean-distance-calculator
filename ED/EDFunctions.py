@@ -7,6 +7,7 @@ Created on Wed Nov  3 15:28:09 2021
 import pandas as pd
 from collections import OrderedDict
 import numpy as np
+from numpy import linalg as LA
 from scipy.integrate import quad
 import time
 import copy
@@ -105,11 +106,19 @@ def predictLabelLocation(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
             AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
             if ((len(AdjacentLabel) != 0) and (Ind != 0)):
                 if (DataFrame[f"{PredictLabel}_p-val"][Ind - 1] >= CutOff):
+                    ##########
+                    #Create Direction Vectors between the first adjacent label available in the list
+                    #Parallelogram law
+                    ##########
                     DirectionVec = [DataFrame[f"{PredictLabel}_x"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1], 
                                     DataFrame[f"{PredictLabel}_y"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
                     ReferenceDirection = DirectionVec
                 elif ((DataFrame[f"{PredictLabel}_p-val"][Ind - 1] < CutOff) and (len(ReferenceDirection) == 0)):
                     ReferenceDirection = [0, 0]
+                ###########
+                #Compute the displacement between available surronding label
+                #Compute the vector addition (parallelogram law) and scale the Ind - 1 first available adjacent label by it
+                ###########
                 Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
                                 DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
                 Scale = [Ji + Jj for Ji, Jj in zip(ReferenceDirection, Displacement)]
@@ -130,24 +139,34 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
         DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
     ReferenceMid = []
     FactorDict = {"Angle":0}
+    MidPoint_Norm = []
+    DisplacementList = []
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
         AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
+        #If the Head label is poorly track initiate this statement
         if (PVals < CutOff):  
             if ((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] and DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) >= CutOff):
-               MidPoint = [(DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DataFrame[f"{LabelsFrom[1]}_x"][Ind])/2,
-                           (DataFrame[f"{LabelsFrom[0]}_y"][Ind] + DataFrame[f"{LabelsFrom[1]}_y"][Ind])/2]
-               ReferenceMid = MidPoint
+                #If the adjacent labels (R_Ear, L_Ear) are available, assign the position of the head as the midpoint between
+                #The line segment connecting the two labels. Store this Midpoint as a position vector
+                MidPoint = [(DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DataFrame[f"{LabelsFrom[1]}_x"][Ind])/2,
+                            (DataFrame[f"{LabelsFrom[0]}_y"][Ind] + DataFrame[f"{LabelsFrom[1]}_y"][Ind])/2]
+                MidPoint_Norm.append(LA.norm([MidPoint[0] - DataFrame[f"{LabelsFrom[0]}_x"][Ind], 
+                                              MidPoint[1] - DataFrame[f"{LabelsFrom[0]}_y"][Ind]]))
+                ReferenceMid = MidPoint
             elif (((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] or DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) < CutOff)
                   and (len(AdjacentLabel) != 0)):
+                
+                #This applies the per frame displacement of an adjacent label to the Head label
                 Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
                                 DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
+
                 ReferenceMid = [ReferenceMid[0] + Displacement[0], ReferenceMid[1] + Displacement[1]]
+                
             DataFrame[f"{PredictLabel}_x"][Ind] = ReferenceMid[0]
             DataFrame[f"{PredictLabel}_y"][Ind] = ReferenceMid[1]
-            DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.0
-        # else:
-        #     DataFrame[f"{PredictLabel}_x"][Ind] = 
-        #     DataFrame[f"{PredictLabel}_y"][Ind] = 
+            
+    print(MidPoint_Norm, np.average(MidPoint_Norm), np.std(MidPoint_Norm))
+    breakpoint()
     DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
     return(DataFrame)
 
