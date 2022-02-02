@@ -173,6 +173,8 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
                 cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[4][i][0]), int(Annotations[4][i][1])), (255, 0, 0), 5, 8, 0)
                 cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[5][i][0]), int(Annotations[5][i][1])), (50, 100, 150), 5, 8, 0)
                 cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[6][i][0]), int(Annotations[6][i][1])), (150, 100, 50), 5, 8, 0)
+                __draw_label(frame, f"{int(PositionVectorsY[i][0])}, {int(PositionVectorsY[i][1])}", (1500, 200), (100, 50, 255))
+                cv2.circle(frame, (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), radius = 0, color=(0, 0, 255), thickness=-1)
             except IndexError:
                 pass
             out.write(frame)

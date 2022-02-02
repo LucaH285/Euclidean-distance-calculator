@@ -7,7 +7,11 @@ Created on Wed Nov  3 15:28:09 2021
 import pandas as pd
 from collections import OrderedDict
 import numpy as np
+<<<<<<< Updated upstream
 from numpy import linalg as LA
+=======
+import math
+>>>>>>> Stashed changes
 from scipy.integrate import quad
 import time
 import copy
@@ -97,6 +101,9 @@ def predictLabelLocation(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
     NewColumns = list(DataFrame.columns.values)
     for Cols in DataFrame.columns.values:
         DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
+    #If the direction vector remains the same, there will be an over-estimation in the new position of the head if you continue to reuse
+    #the same direction vector. Maybe scale the direction vector.
+    # DataFrame.to_csv(r'F:\WorkFiles_XCELLeration\Video\Trim2\DF_nonedited.csv')
     ReferenceDirection = []
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
         if (PVals < CutOff):
@@ -106,26 +113,41 @@ def predictLabelLocation(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
             AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
             if ((len(AdjacentLabel) != 0) and (Ind != 0)):
                 if (DataFrame[f"{PredictLabel}_p-val"][Ind - 1] >= CutOff):
+<<<<<<< Updated upstream
                     ##########
                     #Create Direction Vectors between the first adjacent label available in the list
                     #Parallelogram law
                     ##########
+=======
+                    ###########
+                    #Calculates the direction vector between the adjacent label and the target label if the Ind - 1 target is available
+                    ###########
+>>>>>>> Stashed changes
                     DirectionVec = [DataFrame[f"{PredictLabel}_x"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1], 
                                     DataFrame[f"{PredictLabel}_y"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
                     ReferenceDirection = DirectionVec
                 elif ((DataFrame[f"{PredictLabel}_p-val"][Ind - 1] < CutOff) and (len(ReferenceDirection) == 0)):
                     ReferenceDirection = [0, 0]
+<<<<<<< Updated upstream
                 ###########
                 #Compute the displacement between available surronding label
                 #Compute the vector addition (parallelogram law) and scale the Ind - 1 first available adjacent label by it
                 ###########
+=======
+                #########
+                #Calculates the between frame displacement as a vector
+                #########
+>>>>>>> Stashed changes
                 Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
                                 DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
-                Scale = [Ji + Jj for Ji, Jj in zip(ReferenceDirection, Displacement)]
+                Scale = np.add(ReferenceDirection, Displacement)
                 DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0]
                 DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]
-                DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.0 
-    # DataFrame.to_csv(r'F:\WorkFiles_XCELLeration\Video\Trim2\DF.csv')
+                DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.2 
+                if DataFrame[f"{PredictLabel}_y"][Ind] < 100:
+                    print(Displacement, ReferenceDirection, DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1], Scale[1])
+                    time.sleep(0.05)
+    # DataFrame.to_csv(r'F:\WorkFiles_XCELLeration\Video\Trim2\DF_edited.csv')
     DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
     return(DataFrame) 
 
@@ -138,14 +160,21 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
     for Cols in DataFrame.columns.values:
         DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
     ReferenceMid = []
+<<<<<<< Updated upstream
     FactorDict = {"Angle":0}
     MidPoint_Norm = []
     DisplacementList = []
+=======
+    FactorDict = {"Angle_Right":0, "Angle_Left":0}
+    VectorAngle = lambda V1, V2: math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1))))
+    RotationMatrix = lambda Theta: np.array([[math.cos(Theta), math.sin(Theta)], [-1*math.sin(Theta), math.cos(Theta)]])
+>>>>>>> Stashed changes
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
         AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
         #If the Head label is poorly track initiate this statement
         if (PVals < CutOff):  
             if ((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] and DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) >= CutOff):
+<<<<<<< Updated upstream
                 #If the adjacent labels (R_Ear, L_Ear) are available, assign the position of the head as the midpoint between
                 #The line segment connecting the two labels. Store this Midpoint as a position vector
                 MidPoint = [(DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DataFrame[f"{LabelsFrom[1]}_x"][Ind])/2,
@@ -167,6 +196,54 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
             
     print(MidPoint_Norm, np.average(MidPoint_Norm), np.std(MidPoint_Norm))
     breakpoint()
+=======
+               MidPoint = [(DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DataFrame[f"{LabelsFrom[1]}_x"][Ind])/2,
+                           (DataFrame[f"{LabelsFrom[0]}_y"][Ind] + DataFrame[f"{LabelsFrom[1]}_y"][Ind])/2]
+               ReferenceMid = MidPoint
+               
+               if (DataFrame[f"{LabelsFrom[2]}_p-val"][Ind] >= CutOff):
+                   DVec = [ReferenceMid[0] - DataFrame[f"{LabelsFrom[2]}_x"][Ind],
+                           ReferenceMid[1] - DataFrame[f"{LabelsFrom[2]}_y"][Ind]]
+                   DVec_Right = [DataFrame[f"{LabelsFrom[0]}_x"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind],
+                            DataFrame[f"{LabelsFrom[0]}_y"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind]]
+                   DVec_Left = [DataFrame[f"{LabelsFrom[1]}_x"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind],
+                            DataFrame[f"{LabelsFrom[1]}_y"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind]]
+                   Theta_Right = VectorAngle(DVec, DVec_Right)
+                   Theta_Left = VectorAngle(DVec, DVec_Left)
+                   FactorDict["Angle_Right"] = Theta_Right
+                   FactorDict["Angle_Left"] = Theta_Left
+                   
+                   
+            elif (((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] or DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) < CutOff)
+                  and (len(AdjacentLabel) != 0) and (DataFrame[f"{LabelsFrom[2]}_p-val"][Ind] >= CutOff)):
+                if ((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind]) >= CutOff):
+                    DVec_Right = [DataFrame[f"{LabelsFrom[0]}_x"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind],
+                             DataFrame[f"{LabelsFrom[0]}_y"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind]]
+                    ScaleRoation = np.dot(RotationMatrix(Theta=FactorDict["Angle_Right"]), DVec_Right) 
+                    DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[0]
+                    DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[1]
+                    
+                elif ((DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) >= CutOff):
+
+                    DVec_Left = [DataFrame[f"{LabelsFrom[1]}_x"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind],
+                             DataFrame[f"{LabelsFrom[1]}_y"][Ind] - DataFrame[f"{LabelsFrom[2]}_x"][Ind]]
+                    ScaleRoation = np.dot(RotationMatrix(Theta=FactorDict["Angle_Left"]), DVec_Left) 
+                    DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[0]
+                    DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[1]
+                    
+
+            #     Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
+            #                     DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
+            #     ReferenceMid = [ReferenceMid[0] + Displacement[0], ReferenceMid[1] + Displacement[1]]
+                
+                
+            # DataFrame[f"{PredictLabel}_x"][Ind] = ReferenceMid[0]
+            # DataFrame[f"{PredictLabel}_y"][Ind] = ReferenceMid[1]
+            DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.0
+        # else:
+        #     DataFrame[f"{PredictLabel}_x"][Ind] = 
+        #     DataFrame[f"{PredictLabel}_y"][Ind] = 
+>>>>>>> Stashed changes
     DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
     return(DataFrame)
 

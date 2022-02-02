@@ -57,6 +57,7 @@ class loadPreprocess(object):
                 elif self.predict_label == False:
                     Predict = Preprocess[0]
                 PValAdjust = EDFunctions.checkPVals(Predict, self.PVal)
+                # PValAdjust.to_csv(r"F:\WorkFiles_XCELLeration\Video\Trim2\DF_edited_adjust.csv")
                 PreprocessedFrames[Index].append(PValAdjust)
                 self.BodyPartList.append(Preprocess[1])
         return(PreprocessedFrames)
