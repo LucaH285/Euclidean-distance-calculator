@@ -7,11 +7,8 @@ Created on Wed Nov  3 15:28:09 2021
 import pandas as pd
 from collections import OrderedDict
 import numpy as np
-<<<<<<< Updated upstream
 from numpy import linalg as LA
-=======
 import math
->>>>>>> Stashed changes
 from scipy.integrate import quad
 import time
 import copy
@@ -113,31 +110,19 @@ def predictLabelLocation(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
             AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
             if ((len(AdjacentLabel) != 0) and (Ind != 0)):
                 if (DataFrame[f"{PredictLabel}_p-val"][Ind - 1] >= CutOff):
-<<<<<<< Updated upstream
                     ##########
                     #Create Direction Vectors between the first adjacent label available in the list
                     #Parallelogram law
                     ##########
-=======
-                    ###########
-                    #Calculates the direction vector between the adjacent label and the target label if the Ind - 1 target is available
-                    ###########
->>>>>>> Stashed changes
                     DirectionVec = [DataFrame[f"{PredictLabel}_x"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1], 
                                     DataFrame[f"{PredictLabel}_y"][Ind - 1] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
                     ReferenceDirection = DirectionVec
                 elif ((DataFrame[f"{PredictLabel}_p-val"][Ind - 1] < CutOff) and (len(ReferenceDirection) == 0)):
                     ReferenceDirection = [0, 0]
-<<<<<<< Updated upstream
                 ###########
                 #Compute the displacement between available surronding label
                 #Compute the vector addition (parallelogram law) and scale the Ind - 1 first available adjacent label by it
                 ###########
-=======
-                #########
-                #Calculates the between frame displacement as a vector
-                #########
->>>>>>> Stashed changes
                 Displacement = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind] - DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1],
                                 DataFrame[f"{AdjacentLabel[0]}_y"][Ind] - DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1]]
                 Scale = np.add(ReferenceDirection, Displacement)
@@ -160,15 +145,9 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
     for Cols in DataFrame.columns.values:
         DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
     ReferenceMid = []
-<<<<<<< Updated upstream
-    FactorDict = {"Angle":0}
-    MidPoint_Norm = []
-    DisplacementList = []
-=======
     FactorDict = {"Angle_Right":0, "Angle_Left":0}
     VectorAngle = lambda V1, V2: math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1))))
     RotationMatrix = lambda Theta: np.array([[math.cos(Theta), math.sin(Theta)], [-1*math.sin(Theta), math.cos(Theta)]])
->>>>>>> Stashed changes
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
         AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
         #If the Head label is poorly track initiate this statement
