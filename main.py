@@ -23,6 +23,7 @@ import itertools
 import time
 import click
 
+PREDICTLABEL_PVAL = []
 
 class loadPreprocess(object):
 
@@ -50,13 +51,15 @@ class loadPreprocess(object):
             for Frames in Files:
                 Preprocess = EDFunctions.preprocessor(Frames)
                 if self.predict_label == True:
-                    Predict = EDFunctions.predictLabelLocation(Preprocess[0], self.PVal, 
+                    Predict = EDFunctions.predictLabel_MidpointAdjacent(Preprocess[0], self.PVal, 
                                                                   LabelsFrom=self.ReferenceLabel, 
                                                                   colNames = Preprocess[1], 
                                                                   PredictLabel=self.LabelToPredict)
+                    
+                    PREDICTLABEL_PVAL.append(Predict[1])
                 elif self.predict_label == False:
-                    Predict = Preprocess[0]
-                PValAdjust = EDFunctions.checkPVals(Predict, self.PVal)
+                    Predict = [Preprocess[0]]
+                PValAdjust = EDFunctions.checkPVals(Predict[0], self.PVal)
                 # PValAdjust.to_csv(r"F:\WorkFiles_XCELLeration\Video\Trim2\DF_edited_adjust.csv")
                 PreprocessedFrames[Index].append(PValAdjust)
                 self.BodyPartList.append(Preprocess[1])
@@ -388,7 +391,8 @@ class circlingBehavior(residualComputations):
                                                        MaxX=self.Resolution[0], CriticalAngle=335)
                     
                     RF.TrackOnVideo(Annotations=Quantifier, videoFile=self.VideoInput,
-                                    PositionVectorsX=Coords_From, PositionVectorsY=Coords_To, VideoOut = self.VideoOutput)
+                                    PositionVectorsX=Coords_From, PositionVectorsY=Coords_To, VideoOut = self.VideoOutput,
+                                    PVals = PREDICTLABEL_PVAL)
 
         else:
             raise(KeyError("Label(s) of interest not tracked by DLC"))
@@ -445,7 +449,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"D:\WorkFiles_XCELLeration\Video\Trim2\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"F:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
     Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4, Predict = True, ReferenceLabels=["Right_Ear", "Left_Ear"], PredictLabel="Head")
     PreProcessedData = Class.__call__()
@@ -471,7 +475,7 @@ if __name__=="__main__":
 
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
-                                VideoIn = r'D:\WorkFiles_XCELLeration\Video\Trim2\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+                                VideoIn = r'F:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
                                 VideoOut = r"", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     

@@ -33,6 +33,21 @@ def renameCols(InputFileList, BodyParts):
 # def matrixSkeleton(Labels_To = [], Label_From = "", InputFileList):
 
 def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
+    """
+    Function controls the clockwise and counterclockwise counting of input videos
+
+    Parameters
+    ----------
+    Data frames as inputs
+    
+    Takes the three columns that are associated with a label (X, Y, p-val), handled in the while loop
+    changes the 
+
+    Returns
+    -------
+    The function returns a list of these preprocessed frames.
+    returns a list of body parts as well.
+    """
     DirectionVectorsFxn = lambda PositionVec1, PositionVec2: [[V2 - V1  for V1, V2 in zip(Vectors1, Vectors2)] for Vectors1, Vectors2 in zip(PositionVec1, PositionVec2)]
     MaxVectorFunction = lambda StartPosition, EndPosition: [[EndVecs[0] - StartVecs[0], EndVecs[1] - StartVecs[1]] for StartVecs, EndVecs in zip(StartPosition, EndPosition)]
     DirectionVectors = DirectionVectorsFxn(PositionVecX, PositionVecY)
@@ -64,6 +79,7 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
     Condition = True
     while(Condition):
         CCW_CrossVector = False
+        #Theta1
         for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
             """
             Another way is to check if a full revolution has occured before counting
@@ -71,6 +87,7 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
             """
             if ((Theta1/CriticalAngle >= CriticalAngle/360)
                 and (Theta2/CriticalAngle < 0.25) and (CCW_CrossVector is False)
+                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)
                 #This argument controls the frame indecces to make sure that Frames are sufficiently 
                 #distanced from each other so as to avoid counting counterclocwise then clockwise motion
                 #that passes the critical angle (happens sometimes)
@@ -86,15 +103,17 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle)
             else:
                 RotationalMotionCW.append(RotationalHashMap["CW"] + Theta1/CriticalAngle)
+                
             if (((Theta2/CriticalAngle < Theta1/CriticalAngle) or (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90)) 
                   and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
                 if (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90):
                     CCW_CrossVector = True
+                    
         CW_CrossVector = False
         for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
             if ((Theta2/CriticalAngle >= CriticalAngle/360) and (Theta1/CriticalAngle < 0.25) and (CW_CrossVector is False)
                 and ((AngleList.index(Theta2) - AngleIndexCCW) > 30) 
-                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
+                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
                 RotationalHashMap["CCW"] += 1
                 RotationalMotionCCW.append(RotationalHashMap["CCW"])
                 AngleIndexCCW = AngleList.index(Theta2)
@@ -104,9 +123,12 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 RotationalMotionCCW.append(RotationalHashMap["CCW"] + (1 - (Theta2/CriticalAngle)))
             else:
                 RotationalMotionCCW.append(RotationalHashMap["CCW"] + (1 - (Theta2/CriticalAngle)))
-            if ((Theta1/CriticalAngle > Theta2/CriticalAngle) or (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90)
+            
+            #Argument should set CW_CrossVector if the animal crosses the central axis (pi/2) in the clockwise direction
+            #If Theta1 > 0 and less than 90, if Theta2
+            if ((Theta2/CriticalAngle > Theta1/CriticalAngle) or (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90)
                 and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
-                if (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90):
+                if (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90):
                     CW_CrossVector = True
         """
         Rounds the rotations up to the nearest whole integer if > 90% of the rotation has been made in either direction.
@@ -139,7 +161,7 @@ def rotationQuantifier2(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
 
     pass
 
-def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, VideoOut):
+def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, VideoOut, PVals):
     cap = cv2.VideoCapture(videoFile)
     # current_state = False
     # annotation_list = Annotations
@@ -174,7 +196,19 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
                 cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[5][i][0]), int(Annotations[5][i][1])), (50, 100, 150), 5, 8, 0)
                 cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(Annotations[6][i][0]), int(Annotations[6][i][1])), (150, 100, 50), 5, 8, 0)
                 __draw_label(frame, f"{int(PositionVectorsY[i][0])}, {int(PositionVectorsY[i][1])}", (1500, 200), (100, 50, 255))
+                __draw_label(frame, f"Frame: {i}", (1500, 300), (0,0,255))
                 cv2.circle(frame, (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), radius = 0, color=(0, 0, 255), thickness=-1)
+                if len(PVals) != 0:
+                    if PVals[0][i] >= 4.0:
+                        cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), (0, 0, 0), 5, 8, 0)
+                    elif PVals[0][i] >= 3.0 and PVals[0][i] < 4.0:
+                        cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), (0, 0, 255), 5, 8, 0)
+                    #Left Ear
+                    elif PVals[0][i] >= 2.0 and PVals[0][i] < 3.0:
+                        cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), (255, 255, 255), 5, 8, 0)
+                    #Right Ear
+                    elif PVals[0][i] > 1.0 and PVals[0][i] < 2.0:
+                        cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), (0, 200, 255), 5, 8, 0)
             except IndexError:
                 pass
             out.write(frame)
