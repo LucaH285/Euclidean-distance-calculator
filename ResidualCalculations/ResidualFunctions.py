@@ -91,7 +91,7 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 #This argument controls the frame indecces to make sure that Frames are sufficiently 
                 #distanced from each other so as to avoid counting counterclocwise then clockwise motion
                 #that passes the critical angle (happens sometimes)
-                and ((AngleList.index(Theta1) - AngleIndex) > 30)):
+                and ((AngleList.index(Theta1) - AngleIndex) > 45)):
                 RotationalHashMap["CW"] += 1
                 RotationalMotionCW.append(RotationalHashMap["CW"])
                 AngleIndex = AngleList.index(Theta1)
@@ -108,28 +108,37 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                   and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
                 if (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90):
                     CCW_CrossVector = True
+                    AngleIndex = AngleList.index(Theta1)
+                    
                     
         CW_CrossVector = False
         for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
+            #If the second angle in the list passes the 360 point first and 
             if ((Theta2/CriticalAngle >= CriticalAngle/360) and (Theta1/CriticalAngle < 0.25) and (CW_CrossVector is False)
-                and ((AngleList.index(Theta2) - AngleIndexCCW) > 30) 
-                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):
+                and ((AngleList.index(Theta2) - AngleIndexCCW) > 45) 
+                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):                
                 RotationalHashMap["CCW"] += 1
                 RotationalMotionCCW.append(RotationalHashMap["CCW"])
+                #Count the AngleIndex when only when it crosses in the counter clockwise direction
                 AngleIndexCCW = AngleList.index(Theta2)
             elif ((Theta2/CriticalAngle >= CriticalAngle/360) and (Theta1/CriticalAngle < 0.25) and (CW_CrossVector is True)
-                and ((AngleList.index(Theta2) - AngleIndexCCW) > 30)):
+                and ((AngleList.index(Theta2) - AngleIndexCCW) < 45)):
+                AngleIndexCCW = AngleList.index(Theta2)
                 CW_CrossVector = False
                 RotationalMotionCCW.append(RotationalHashMap["CCW"] + (1 - (Theta2/CriticalAngle)))
             else:
                 RotationalMotionCCW.append(RotationalHashMap["CCW"] + (1 - (Theta2/CriticalAngle)))
-            
+                
+
             #Argument should set CW_CrossVector if the animal crosses the central axis (pi/2) in the clockwise direction
             #If Theta1 > 0 and less than 90, if Theta2
-            if ((Theta2/CriticalAngle > Theta1/CriticalAngle) or (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90)
+            if ((Theta2/CriticalAngle > Theta1/CriticalAngle) or (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90)
                 and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
-                if (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90):
+                if (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90):
                     CW_CrossVector = True
+                    AngleIndexCCW = AngleList.index(Theta2)
+                    # print(Theta1, Theta2, AngleList.index(Theta1), AngleList.index(Theta2))
+                    # print(AngleIndexCCW)
         """
         Rounds the rotations up to the nearest whole integer if > 90% of the rotation has been made in either direction.
         """
@@ -148,6 +157,7 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
         else:
             Condition = False
     print(RotationalHashMap)
+    # breakpoint()
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 
@@ -166,7 +176,7 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
     # current_state = False
     # annotation_list = Annotations
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(VideoOut, fourcc, 30.0, (1920, 1080))
+    out = cv2.VideoWriter(VideoOut, fourcc, 30.0, (1200, 780))
     
     def __draw_label(img, text, pos, bg_color):
         font_face = cv2.FONT_HERSHEY_SIMPLEX
@@ -218,6 +228,7 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
                 break
             elif cv2.waitKey(1) & 0xFF == ord('p'):
                 time.sleep(3)
+            time.sleep(0.01)
         else:
             break
     cap.release()
