@@ -32,7 +32,7 @@ def renameCols(InputFileList, BodyParts):
 
 # def matrixSkeleton(Labels_To = [], Label_From = "", InputFileList):
 
-def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
+def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle, FPS, RecordTime_sec):
     """
     Function controls the clockwise and counterclockwise counting of input videos
 
@@ -72,6 +72,7 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
             Phi = 360 - Theta
             AngleList.append(Phi)
 
+    RotationList = [[] for _ in range(0, 4)]
     # Compute the CW and CCW rotations, respectively
     AngleIndex = 0
     AngleIndexCCW = 0
@@ -80,7 +81,23 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
     while(Condition):
         CCW_CrossVector = False
         #Theta1
-        for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
+        FrameInd = ((RecordTime_sec) * 30)
+        for Theta1, Theta2, Ind in zip(AngleList[:-1], AngleList[1:], range(len(AngleList))):
+            
+            if Ind == FrameInd:
+                Time = (FrameInd/FPS)/60
+                CWRotations = RotationalHashMap["CW"]
+                RotationList[0].append(round(Time, 2))
+                RotationList[1].append(FrameInd)
+                RotationList[2].append(CWRotations)
+                FrameInd += (RecordTime_sec * 30) 
+            elif Ind == (len(AngleList) - 2):
+                Time = (Ind/FPS)/60
+                CWRotations = RotationalHashMap["CW"]
+                RotationList[0].append(round(Time, 2))
+                RotationList[1].append(Ind)
+                RotationList[2].append(CWRotations)
+                         
             """
             Another way is to check if a full revolution has occured before counting
             a full cw/ccw rotation.
@@ -92,6 +109,7 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 #distanced from each other so as to avoid counting counterclocwise then clockwise motion
                 #that passes the critical angle (happens sometimes)
                 and ((AngleList.index(Theta1) - AngleIndex) > 45)):
+
                 RotationalHashMap["CW"] += 1
                 RotationalMotionCW.append(RotationalHashMap["CW"])
                 AngleIndex = AngleList.index(Theta1)
@@ -109,18 +127,29 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
                 if (CriticalAngle < Theta2 <= 360 and 0 <= Theta1 < 90):
                     CCW_CrossVector = True
                     AngleIndex = AngleList.index(Theta1)
-                    
-                    
+            
+        FrameInd = (RecordTime_sec * 30)                           
         CW_CrossVector = False
-        for Theta1, Theta2 in zip(AngleList[:-1], AngleList[1:]):
+        for Theta1, Theta2, Ind in zip(AngleList[:-1], AngleList[1:], range(len(AngleList))):
+            
+            if Ind == FrameInd:
+                CCWRotations = RotationalHashMap["CCW"]
+                RotationList[3].append(CCWRotations)
+                FrameInd += (RecordTime_sec * 30) 
+            elif Ind == (len(AngleList) - 2):
+                CCWRotations = RotationalHashMap["CCW"]
+                RotationList[3].append(CCWRotations)
+            
             #If the second angle in the list passes the 360 point first and 
             if ((Theta2/CriticalAngle >= CriticalAngle/360) and (Theta1/CriticalAngle < 0.25) and (CW_CrossVector is False)
                 and ((AngleList.index(Theta2) - AngleIndexCCW) > 45) 
-                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)):                
+                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) < 0)): 
                 RotationalHashMap["CCW"] += 1
                 RotationalMotionCCW.append(RotationalHashMap["CCW"])
                 #Count the AngleIndex when only when it crosses in the counter clockwise direction
                 AngleIndexCCW = AngleList.index(Theta2)
+                
+                
             elif ((Theta2/CriticalAngle >= CriticalAngle/360) and (Theta1/CriticalAngle < 0.25) and (CW_CrossVector is True)
                 and ((AngleList.index(Theta2) - AngleIndexCCW) < 45)):
                 AngleIndexCCW = AngleList.index(Theta2)
@@ -129,14 +158,14 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
             else:
                 RotationalMotionCCW.append(RotationalHashMap["CCW"] + (1 - (Theta2/CriticalAngle)))
                 
-
             #Argument should set CW_CrossVector if the animal crosses the central axis (pi/2) in the clockwise direction
             #If Theta1 > 0 and less than 90, if Theta2
-            if ((Theta2/CriticalAngle > Theta1/CriticalAngle) or (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90)
-                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
-                if (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90):
-                    CW_CrossVector = True
-                    AngleIndexCCW = AngleList.index(Theta2)
+            if ((CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90)):
+                # and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
+                # if (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90):
+                CW_CrossVector = True
+                AngleIndexCCW = AngleList.index(Theta2)
+
                     # print(Theta1, Theta2, AngleList.index(Theta1), AngleList.index(Theta2))
                     # print(AngleIndexCCW)
         """
@@ -149,15 +178,18 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle):
             if (RoundLastCW > 0.9) or (RoundLastCW < 0.9 and RoundLastCWInt > RotationalHashMap["CW"]):
                 RotationalHashMap["CW"] += 1
                 RotationalMotionCW.append(RotationalHashMap["CW"])
+                RotationList[2] = RotationalHashMap["CW"]
                 Condition = False
             elif (RoundLastCCW > 0.9) or (RoundLastCCW < 0.9 and RoundLastCCWInt > RotationalHashMap["CCW"]):
                 RotationalHashMap["CCW"] += 1
                 RotationalMotionCCW.append(RotationalHashMap["CCW"])
+                RotationList[3] = RotationalHashMap["CCW"]
                 Condition = False
         else:
             Condition = False
-    print(RotationalHashMap)
-    # breakpoint()
+    print(RotationalHashMap, FrameCount)
+    Columns = ["Elapsed Time (min)", "Frame Count", "Clockwise Rotations", "Counterclockwise Rotations"]
+    RotationListFrame = pd.DataFrame({Columns[Ind]:RotationList[Ind] for Ind in range(len(Columns))})
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 
@@ -176,7 +208,7 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
     # current_state = False
     # annotation_list = Annotations
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(VideoOut, fourcc, 30.0, (1200, 780))
+    out = cv2.VideoWriter(VideoOut, fourcc, 30.0, (1920, 1080))
     
     def __draw_label(img, text, pos, bg_color):
         font_face = cv2.FONT_HERSHEY_SIMPLEX
@@ -228,7 +260,6 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
                 break
             elif cv2.waitKey(1) & 0xFF == ord('p'):
                 time.sleep(3)
-            time.sleep(0.01)
         else:
             break
     cap.release()

@@ -388,7 +388,7 @@ class circlingBehavior(residualComputations):
                     #MaxY=1080,
                     Vectors = MidpointLabelVector(Midpoints, Coords_To)
                     Quantifier = RF.rotationQuantifier(PositionVecX=Coords_From, PositionVecY=Coords_To, MaxY=self.Resolution[1], 
-                                                       MaxX=self.Resolution[0], CriticalAngle=335)
+                                                       MaxX=self.Resolution[0], CriticalAngle=335, FPS=30, RecordTime_sec=30)
                     
                     RF.TrackOnVideo(Annotations=Quantifier, videoFile=self.VideoInput,
                                     PositionVectorsX=Coords_From, PositionVectorsY=Coords_To, VideoOut = self.VideoOutput,
@@ -449,7 +449,7 @@ class linePlot_Generic(graphGeneric):
         pass
 
 if __name__=="__main__":
-    FilePath=[r"D:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
+    FilePath=[r"F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000.csv"]
     OutPath = "",
     Class = loadPreprocess(FilePath, PValCutoff = 0.5, FPS=4, Predict = True, ReferenceLabels=["Right_Ear", "Left_Ear"], PredictLabel="Head")
     PreProcessedData = Class.__call__()
@@ -457,7 +457,7 @@ if __name__=="__main__":
     #EuclideanDistances = computeEuclideanDistance(BodyPartList = PreProcessedData[1][0]).compute(InputFileList=PreProcessedData[0])
     #Export = computeEuclideanDistance(ExportFilePath=OutPath).exportFunction()
 
-    #computeSums = createHourlySum().compute(InputFileList = EuclideanDistances)
+    #computeSums = createHourlySum().compute(InputFileList = EuclideanDistaqnces)
     #Structure so that if called the computesums variable is replaced with the reindexed frame list.
     #computeSums = createHourlySum().reorientAxis(InputFileList=computeSums, ReIndex=[ 16, 17, 18, 19, 20, 21, 22, 23, 8, 9, 10, 11, 12, 13, 14, 15])
     #Export2 = createHourlySum(ExportFilePath=OutPath).exportFunction()
@@ -475,7 +475,7 @@ if __name__=="__main__":
 
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
-                                VideoIn = r'D:\WorkFiles_XCELLeration\Video\2minTrim_end\PK-10-CTR_Rotation30_7month_May_30_2021_TrimDLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
+                                VideoIn = r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
                                 VideoOut = r"", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     
