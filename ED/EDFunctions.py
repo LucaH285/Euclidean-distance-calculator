@@ -137,8 +137,66 @@ def predictLabelLocation(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
                 
     # print(max(ScaledVec), min(ScaledVec), np.std(ScaledVec), np.average(ScaledVec))
     # print(BodyPart[ScaledVec.index(max(ScaledVec))])
+    PVAL_PREDICTEDLABEL = list(DataFrame[f"{PredictLabel}_p-val"])
     DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
-    return(DataFrame) 
+    return(DataFrame, PVAL_PREDICTEDLABEL) 
+
+def predictLabel_RotationMatrix(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
+    OldColumns = list(DataFrame.columns.values)
+    FeatureList = ["_x", "_y", "_p-val"]
+    NewCols = [f"{ColName}{Feature}" for ColName, Feature in itertools.product(colNames, FeatureList)]
+    DataFrame = DataFrame.rename(columns={DataFrame.columns.values[Ind]:NewCols[Ind] for Ind in range(len(NewCols))})
+    NewColumns = list(DataFrame.columns.values)
+    for Cols in DataFrame.columns.values:
+        DataFrame[Cols] = pd.to_numeric(DataFrame[Cols], downcast="float")
+    ReferenceMid = []
+    FactorDict = {"Angle_Right":0, "Angle_Left":0}
+    VectorAngle = lambda V1, V2: math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1))))
+    RotationMatrix = lambda Theta: np.array([[math.cos(Theta), math.sin(Theta)], [-1*math.sin(Theta), math.cos(Theta)]])
+   
+    for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
+        AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
+        #If the Head label is poorly track initiate this statement
+        if (PVals < CutOff):  
+            if ((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] >= CutOff) and (DataFrame[f"{LabelsFrom[1]}_p-val"][Ind] >= CutOff)):
+               MidPoint = [(DataFrame[f"{LabelsFrom[0]}_x"][Ind] + DataFrame[f"{LabelsFrom[1]}_x"][Ind])/2,
+                           (DataFrame[f"{LabelsFrom[0]}_y"][Ind] + DataFrame[f"{LabelsFrom[1]}_y"][Ind])/2]
+               ReferenceMid = MidPoint
+               
+               DataFrame[f"{PredictLabel}_x"][Ind] = ReferenceMid[0]
+               DataFrame[f"{PredictLabel}_y"][Ind] = ReferenceMid[1]
+               
+               DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.0
+                            
+            elif (((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] or DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) < CutOff)
+                  and (len(AdjacentLabel) != 0) and (DataFrame["Body_p-val"][Ind] >= CutOff)):
+
+                if ((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind]) >= CutOff):
+                     
+                    
+                    DVec_Right = [DataFrame[f"{LabelsFrom[0]}_x"][Ind] - DataFrame["Body_x"][Ind],
+                             DataFrame[f"{LabelsFrom[0]}_y"][Ind] - DataFrame["Body_y"][Ind]]
+                    ScaleRoation = np.dot(RotationMatrix(Theta=FactorDict["Angle_Right"]), DVec_Right) 
+                    DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[0] + DataFrame["Body_x"][Ind]
+                    DataFrame[f"{PredictLabel}_y"][Ind] = ScaleRoation[1] + DataFrame["Body_y"][Ind]
+                    
+                    DataFrame[f"{PredictLabel}_p-val"][Ind] = 2.5
+                    
+                elif ((DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) >= CutOff):
+                    
+                    DVec_Left = [DataFrame[f"{LabelsFrom[1]}_x"][Ind] - DataFrame["Body_x"][Ind],
+                             DataFrame[f"{LabelsFrom[1]}_y"][Ind] - DataFrame["Body_y"][Ind]]
+                    ScaleRoation = np.dot(RotationMatrix(Theta=FactorDict["Angle_Left"]), DVec_Left) 
+                    DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[0] + DataFrame["Body_x"][Ind]
+                    DataFrame[f"{PredictLabel}_y"][Ind] = ScaleRoation[1] + DataFrame["Body_y"][Ind]
+                    
+                    DataFrame[f"{PredictLabel}_p-val"][Ind] = 3.5
+
+    PVAL_PREDICTEDLABEL = list(DataFrame[f"{PredictLabel}_p-val"])
+
+    DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
+    return(DataFrame, PVAL_PREDICTEDLABEL)
+    
 
 def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
     OldColumns = list(DataFrame.columns.values)

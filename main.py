@@ -51,7 +51,7 @@ class loadPreprocess(object):
             for Frames in Files:
                 Preprocess = EDFunctions.preprocessor(Frames)
                 if self.predict_label == True:
-                    Predict = EDFunctions.predictLabel_MidpointAdjacent(Preprocess[0], self.PVal, 
+                    Predict = EDFunctions.predictLabel_RotationMatrix(Preprocess[0], self.PVal, 
                                                                   LabelsFrom=self.ReferenceLabel, 
                                                                   colNames = Preprocess[1], 
                                                                   PredictLabel=self.LabelToPredict)
@@ -388,7 +388,7 @@ class circlingBehavior(residualComputations):
                     #MaxY=1080,
                     Vectors = MidpointLabelVector(Midpoints, Coords_To)
                     Quantifier = RF.rotationQuantifier(PositionVecX=Coords_From, PositionVecY=Coords_To, MaxY=self.Resolution[1], 
-                                                       MaxX=self.Resolution[0], CriticalAngle=335, FPS=30, RecordTime_sec=30)
+                                                       MaxX=self.Resolution[0], CriticalAngle=335, FPS=30, RecordTime_sec=10)
                     
                     RF.TrackOnVideo(Annotations=Quantifier, videoFile=self.VideoInput,
                                     PositionVectorsX=Coords_From, PositionVectorsY=Coords_To, VideoOut = self.VideoOutput,

@@ -160,11 +160,11 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle, FP
                 
             #Argument should set CW_CrossVector if the animal crosses the central axis (pi/2) in the clockwise direction
             #If Theta1 > 0 and less than 90, if Theta2
-            if ((CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90)):
-                # and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
-                # if (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90):
-                CW_CrossVector = True
-                AngleIndexCCW = AngleList.index(Theta2)
+            if ((CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90)
+                and (np.cross(DirectionVectors[AngleList.index(Theta1)], DirectionVectors[AngleList.index(Theta2)]) > 0)):
+                if (CriticalAngle < Theta1 <= 360 and 0 <= Theta2 < 90):
+                    CW_CrossVector = True
+                    AngleIndexCCW = AngleList.index(Theta2)
 
                     # print(Theta1, Theta2, AngleList.index(Theta1), AngleList.index(Theta2))
                     # print(AngleIndexCCW)
@@ -190,6 +190,10 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle, FP
     print(RotationalHashMap, FrameCount)
     Columns = ["Elapsed Time (min)", "Frame Count", "Clockwise Rotations", "Counterclockwise Rotations"]
     RotationListFrame = pd.DataFrame({Columns[Ind]:RotationList[Ind] for Ind in range(len(Columns))})
+    
+    # breakpoint()
+    RotationListFrame.to_csv(r'F:\WorkFiles_XCELLeration\Video\2minTrim_end\Counts_Total.csv')
+    
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
 
