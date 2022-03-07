@@ -476,7 +476,7 @@ if __name__=="__main__":
 
     circling = circlingBehavior(FromLabel="Body", ToLabel="Head", ScreenRes = [1920, 1080],
                                 VideoIn = r'F:\WorkFiles_XCELLeration\Video\PK-10-CTR_Rotation30_7month_May_30_2021DLC_resnet50_Parkinsons_RatNov13shuffle1_200000_labeled.mp4',
-                                VideoOut = r"", AllLabels=PreProcessedData[1][0],
+                                VideoOut = r"F:\WorkFiles_XCELLeration\Video\DifferentApproaches\RotationMatrix2.avi", AllLabels=PreProcessedData[1][0],
                                 Label_To1 = "Left_Ear", Label_To2 = "Right_Ear").residualcomputation(InputFileList=PreProcessedData[0])
     
                                                                                                       

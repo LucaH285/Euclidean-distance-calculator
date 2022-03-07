@@ -109,7 +109,6 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle, FP
                 #distanced from each other so as to avoid counting counterclocwise then clockwise motion
                 #that passes the critical angle (happens sometimes)
                 and ((AngleList.index(Theta1) - AngleIndex) > 45)):
-
                 RotationalHashMap["CW"] += 1
                 RotationalMotionCW.append(RotationalHashMap["CW"])
                 AngleIndex = AngleList.index(Theta1)
@@ -192,7 +191,7 @@ def rotationQuantifier(PositionVecX, PositionVecY, MaxY, MaxX, CriticalAngle, FP
     RotationListFrame = pd.DataFrame({Columns[Ind]:RotationList[Ind] for Ind in range(len(Columns))})
     
     # breakpoint()
-    RotationListFrame.to_csv(r'F:\WorkFiles_XCELLeration\Video\2minTrim_end\Counts_Total.csv')
+    RotationListFrame.to_csv(r'F:\WorkFiles_XCELLeration\Video\DifferentApproaches\PGram.csv')
     
     return(RotationalMotionCW, RotationalMotionCCW, DirectionVectors, plotMaxVec_YMax,
            plotMaxVec_YMin, plotMaxVec_XMax, plotMaxVec_XMin)
@@ -255,6 +254,7 @@ def TrackOnVideo(Annotations, videoFile, PositionVectorsX, PositionVectorsY, Vid
                     #Right Ear
                     elif PVals[0][i] > 1.0 and PVals[0][i] < 2.0:
                         cv2.line(frame, (int(PositionVectorsX[i][0]), int(PositionVectorsX[i][1])), (int(PositionVectorsY[i][0]), int(PositionVectorsY[i][1])), (0, 200, 255), 5, 8, 0)
+                
             except IndexError:
                 pass
             out.write(frame)

@@ -129,10 +129,10 @@ def predictLabelLocation(DataFrame, CutOff, LabelsFrom, colNames, PredictLabel):
                 Scale = np.add(ReferenceDirection, Displacement)
                 DataFrame[f"{PredictLabel}_x"][Ind] = DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0]
                 DataFrame[f"{PredictLabel}_y"][Ind] = DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]
-                DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.2 
+                DataFrame[f"{PredictLabel}_p-val"][Ind] = 4.5 
                 Norm = LA.norm(Scale)
-            elif (len(AdjacentLabel) == 0):
-                print(AdjacentLabel)
+            # elif (len(AdjacentLabel) == 0):
+            #     print(AdjacentLabel)
 
                 
     # print(max(ScaledVec), min(ScaledVec), np.std(ScaledVec), np.average(ScaledVec))
@@ -152,7 +152,16 @@ def predictLabel_RotationMatrix(DataFrame, CutOff, LabelsFrom, colNames, Predict
     ReferenceMid = []
     FactorDict = {"Angle_Right":0, "Angle_Left":0}
     VectorAngle = lambda V1, V2: math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1))))
-    RotationMatrix = lambda Theta: np.array([[math.cos(Theta), math.sin(Theta)], [-1*math.sin(Theta), math.cos(Theta)]])
+    
+    RotationMatrixCW = lambda Theta: np.array(
+        [[math.cos(Theta), math.sin(Theta)], 
+         [-1*math.sin(Theta), math.cos(Theta)]]
+        )
+    
+    RotationMatrixCCW = lambda Theta: np.array(
+        [[math.cos(Theta), -1*math.sin(Theta)], 
+         [math.sin(Theta), math.cos(Theta)]]
+        )
    
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
         AdjacentLabel = [Label for Label in LabelsFrom if DataFrame[f"{Label}_p-val"][Ind] >= CutOff]
@@ -166,31 +175,33 @@ def predictLabel_RotationMatrix(DataFrame, CutOff, LabelsFrom, colNames, Predict
                DataFrame[f"{PredictLabel}_x"][Ind] = ReferenceMid[0]
                DataFrame[f"{PredictLabel}_y"][Ind] = ReferenceMid[1]
                
-               DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.0
+               DataFrame[f"{PredictLabel}_p-val"][Ind] = 3.5
                             
             elif (((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind] or DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) < CutOff)
                   and (len(AdjacentLabel) != 0) and (DataFrame["Body_p-val"][Ind] >= CutOff)):
 
+                #Right
                 if ((DataFrame[f"{LabelsFrom[0]}_p-val"][Ind]) >= CutOff):
                      
                     
                     DVec_Right = [DataFrame[f"{LabelsFrom[0]}_x"][Ind] - DataFrame["Body_x"][Ind],
                              DataFrame[f"{LabelsFrom[0]}_y"][Ind] - DataFrame["Body_y"][Ind]]
-                    ScaleRoation = np.dot(RotationMatrix(Theta=FactorDict["Angle_Right"]), DVec_Right) 
+                    ScaleRoation = np.dot(RotationMatrixCW(Theta=FactorDict["Angle_Right"]), DVec_Right) 
                     DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[0] + DataFrame["Body_x"][Ind]
                     DataFrame[f"{PredictLabel}_y"][Ind] = ScaleRoation[1] + DataFrame["Body_y"][Ind]
                     
-                    DataFrame[f"{PredictLabel}_p-val"][Ind] = 2.5
+                    DataFrame[f"{PredictLabel}_p-val"][Ind] = 4.5 
                     
+               #Left 
                 elif ((DataFrame[f"{LabelsFrom[1]}_p-val"][Ind]) >= CutOff):
                     
                     DVec_Left = [DataFrame[f"{LabelsFrom[1]}_x"][Ind] - DataFrame["Body_x"][Ind],
                              DataFrame[f"{LabelsFrom[1]}_y"][Ind] - DataFrame["Body_y"][Ind]]
-                    ScaleRoation = np.dot(RotationMatrix(Theta=FactorDict["Angle_Left"]), DVec_Left) 
+                    ScaleRoation = np.dot(RotationMatrixCCW(Theta=FactorDict["Angle_Left"]), DVec_Left) 
                     DataFrame[f"{PredictLabel}_x"][Ind] = ScaleRoation[0] + DataFrame["Body_x"][Ind]
                     DataFrame[f"{PredictLabel}_y"][Ind] = ScaleRoation[1] + DataFrame["Body_y"][Ind]
                     
-                    DataFrame[f"{PredictLabel}_p-val"][Ind] = 3.5
+                    DataFrame[f"{PredictLabel}_p-val"][Ind] = 2.5
 
     PVAL_PREDICTEDLABEL = list(DataFrame[f"{PredictLabel}_p-val"])
 
@@ -210,6 +221,7 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
     
     AngleDict = {"Angle_Right":0, "Angle_Left":0}
     VectorAngle = lambda V1, V2: math.acos((np.dot(V2, V1))/((np.linalg.norm(V2))*(np.linalg.norm(V1))))
+    
     RotationMatrixCW = lambda Theta: np.array(
         [[np.cos(Theta), np.sin(Theta)], 
          [-1*np.sin(Theta), np.cos(Theta)]]
@@ -219,7 +231,12 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
         [[math.cos(Theta), -1*math.sin(Theta)], 
          [math.sin(Theta), math.cos(Theta)]]
         )
-     
+    
+    # print(RotationMatrixCW(Theta = np.pi/2))
+    # print(RotationMatrixCCW(Theta = np.pi/2))
+    
+    # breakpoint()
+    
     AngleList_Right = []
     AngleList_Left = []
     for Ind, PVals in enumerate(DataFrame[f"{PredictLabel}_p-val"]):
@@ -288,14 +305,12 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
                         ScaledVec = [ReferenceMid[0] - DataFrame["Body_x"][Ind],
                                       ReferenceMid[1] - DataFrame["Body_y"][Ind]]
                         
-                        Theta = VectorAngle(ScaledVec, BodyAdjacent_Vector)
+                        Theta = VectorAngle(BodyAdjacent_Vector, ScaledVec)
                         VectorPosition = np.cross(BodyAdjacent_Vector, ScaledVec)
         
                         
                         if AdjacentLabel[0] == "Left_Ear":
                             if (VectorPosition < 0):
-                                # print(ScaledVec, BodyAdjacent_Vector)
-                                # breakpoint()
                                 C1 += 1
                                 RotateAngle = Theta_Left + Theta
                                 RotateVector = RotationMatrixCCW(RotateAngle).dot(ScaledVec)
@@ -305,40 +320,33 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
                             #Correct Position   
                             elif (VectorPosition > 0):
                                 C2 += 1
-                                if (Theta < (Theta_Left - 2 * Theta_Left_std)):
+                                if (Theta < (Theta_Left - (2 * Theta_Left_std))):
                                     RotateAngle = Theta_Left - Theta
                                     RotateVector = RotationMatrixCCW(RotateAngle).dot(ScaledVec)
                                     ReferenceMid = [DataFrame["Body_x"][Ind] + RotateVector[0], DataFrame["Body_y"][Ind] + RotateVector[1]]
                                     DataFrame[f"{PredictLabel}_p-val"][Ind] = 2.5
-                                elif (Theta > (Theta_Left + 2 * Theta_Left_std)):
+                                elif (Theta > (Theta_Left + (2 * Theta_Left_std))):
                                     RotateAngle = Theta - Theta_Left
                                     RotateVector = RotationMatrixCW(RotateAngle).dot(ScaledVec)
                                     ReferenceMid = [DataFrame["Body_x"][Ind] + RotateVector[0], DataFrame["Body_y"][Ind] + RotateVector[1]]
                                     DataFrame[f"{PredictLabel}_p-val"][Ind] = 2.5
                                 else:
-                                    #ReferenceMid = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0], DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]]
                                     DataFrame[f"{PredictLabel}_p-val"][Ind] = 4.0
-                                #White
-                                DataFrame[f"{PredictLabel}_p-val"][Ind] = 2.5
 
                         elif AdjacentLabel[0] == "Right_Ear":
                             if VectorPosition < 0:
-                                if (Theta < (Theta_Right - 2 * Theta_Right_std)):
+                                if (Theta < (Theta_Right - (2 * Theta_Right_std))):
                                     RotateAngle = Theta_Right - Theta
                                     RotateVector = RotationMatrixCW(RotateAngle).dot(ScaledVec)
                                     ReferenceMid = [DataFrame["Body_x"][Ind] + RotateVector[0], DataFrame["Body_y"][Ind] + RotateVector[1]]
                                     DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.5
-                                elif (Theta > (Theta_Right + 2 * Theta_Right_std)):
+                                elif (Theta > (Theta_Right + (2 * Theta_Right_std))):
                                     RotateAngle = Theta - Theta_Right
                                     RotateVector = RotationMatrixCCW(RotateAngle).dot(ScaledVec)
                                     ReferenceMid = [DataFrame["Body_x"][Ind] + RotateVector[0], DataFrame["Body_y"][Ind] + RotateVector[1]]
                                     DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.5
                                 else:
-                                    #ReferenceMid = [DataFrame[f"{AdjacentLabel[0]}_x"][Ind - 1] + Scale[0], DataFrame[f"{AdjacentLabel[0]}_y"][Ind - 1] + Scale[1]]
                                     DataFrame[f"{PredictLabel}_p-val"][Ind] = 4.0
-                                #Orange
-                                #DataFrame[f"{PredictLabel}_p-val"][Ind] = 1.5
-                                
                             elif VectorPosition > 0:
                                 RotateAngle = Theta_Right + Theta
                                 RotateVector = np.dot(RotationMatrixCW(RotateAngle), ScaledVec)
@@ -358,7 +366,7 @@ def predictLabel_MidpointAdjacent(DataFrame, CutOff, LabelsFrom, colNames, Predi
     # print(C1, C2)
     # breakpoint()
     PVAL_PREDICTEDLABEL = list(DataFrame[f"{PredictLabel}_p-val"])
-    #DataFrame.to_csv(r"F:\WorkFiles_XCELLeration\Video\2minTrim_end\TestFrame.csv")
+    #DataFrame.to_csv(r"F:\WorkFiles_XCELLeration\Video\DifferentApproaches\Combined_PgramRotation.csv")
     DataFrame = DataFrame.rename(columns={NewColumns[Ind]: OldColumns[Ind] for Ind in range(len(OldColumns))})
     return(DataFrame, PVAL_PREDICTEDLABEL)
 
